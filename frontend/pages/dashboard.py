@@ -1,11 +1,10 @@
 # frontend/pages/dashboard.py
 """
-صفحة لوحة التحكم - تم إصلاح مشكلة None
+صفحة لوحة التحكم - آمنة من مشاكل الاختفاء والأخطاء غير المعالجة
 """
 
 import streamlit as st
 import pandas as pd
-from frontend.utils.helpers import get_sample_data
 
 def render():
     """عرض لوحة التحكم"""
@@ -60,33 +59,53 @@ def display_metrics():
         """, unsafe_allow_html=True)
 
 def display_scan_results():
-    """عرض نتائج المسح - مع التحقق من None"""
+    """عرض نتائج المسح مع الحماية الكاملة من الأخطاء"""
     results = st.session_state.get('scan_results')
     
-    if results is not None and not results.empty:
+    if results is not None and isinstance(results, pd.DataFrame) and not results.empty:
         df = results
         
         st.subheader("📋 نتائج المسح")
-        st.dataframe(
-            df,
-            column_config={
-                "symbol": st.column_config.TextColumn("الرمز", width="small"),
-                "name": st.column_config.TextColumn("الشركة"),
-                "sector": st.column_config.TextColumn("القطاع", width="small"),
-                "current_price": st.column_config.NumberColumn("السعر", format="$%.2f"),
-                "squeeze_score": st.column_config.ProgressColumn("درجة الضغط", format="%d/100", min_value=0, max_value=100),
-                "breakout_probability": st.column_config.ProgressColumn("احتمالية الانفجار", format="%.1f%%", min_value=0, max_value=100)
-            },
-            width="stretch",
-            hide_index=True
-        )
-        st.caption(f"✅ تم العثور على {len(df)} فرصة مطابقة للمعايير")
+        
+        try:
+            # إعداد الأعمدة الديناميكي لتجنب الانهيار عند غياب عمود معني
+            column_config = {}
+            if "symbol" in df.columns:
+                column_config["symbol"] = st.column_config.TextColumn("الرمز", width="small")
+            if "name" in df.columns:
+                column_config["name"] = st.column_config.TextColumn("الشركة")
+            if "sector" in df.columns:
+                column_config["sector"] = st.column_config.TextColumn("القطاع", width="small")
+            if "current_price" in df.columns:
+                column_config["current_price"] = st.column_config.NumberColumn("السعر", format="$%.2f")
+            if "squeeze_score" in df.columns:
+                column_config["squeeze_score"] = st.column_config.ProgressColumn("درجة الضغط", format="%d/100", min_value=0, max_value=100)
+            if "breakout_probability" in df.columns:
+                column_config["breakout_probability"] = st.column_config.ProgressColumn("احتمالية الانفجار", format="%.1f%%", min_value=0, max_value=100)
+
+            st.dataframe(
+                df,
+                column_config=column_config,
+                use_container_width=True, # تم الاستبدال بدلاً من width="stretch" المسبب للاختفاء
+                hide_index=True
+            )
+            st.caption(f"✅ تم العثور على {len(df)} فرصة مطابقة للمعايير")
+        except Exception as e:
+            # في حال تعذر الترتيب يظهر جدول عادي دون إسقاط الصفحة
+            st.dataframe(df, use_container_width=True, hide_index=True)
     else:
         st.info("👆 اضغط 'ابدأ المسح' في الشريط الجانبي للحصول على النتائج")
         display_sample_preview()
 
 def display_sample_preview():
-    """عرض نموذج للنتائج"""
+    """عرض نموذج للنتائج بحماية من أخطاء الاستيراد"""
     with st.expander("📋 نموذج للنتائج المتوقعة"):
-        sample_data = get_sample_data()
-        st.dataframe(sample_data, width="stretch", hide_index=True)
+        try:
+            from frontend.utils.helpers import get_sample_data
+            sample_data = get_sample_data()
+            if sample_data is not None and not sample_data.empty:
+                st.dataframe(sample_data, use_container_width=True, hide_index=True)
+            else:
+                st.write("لا تتوفر بيانات نموذجية حالياً.")
+        except Exception as e:
+            st.warning(f"⚠️ تعذر تحميل النموذج الإرشادي: {e}")
