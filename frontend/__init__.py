@@ -1,15 +1,38 @@
 # frontend/__init__.py
 """
-وحدة الواجهة الأمامية - تبسيط الاستيرادات لتجنب الدائرية
+وحدة الواجهة الأمامية (Frontend Package)
+توفير الاستيرادات الرئيسية الموحدة للواجهة بشكل آمن ومستقر لتجنب أخطاء Circular Import
 """
 
-# استيرادات بسيطة فقط
-from .utils.helpers import load_css, format_currency, format_percentage
-from .utils.state import init_session_state
+from frontend.utils.helpers import (
+    load_css,
+    load_inline_css,
+    format_currency,
+    format_percentage,
+    format_number,
+    format_datetime
+)
+from frontend.utils.state import (
+    init_session_state,
+    get_state,
+    set_state,
+    update_state,
+    reset_state
+)
 
 __all__ = [
+    # Design & Formatting Helpers
     'load_css',
+    'load_inline_css',
     'format_currency',
     'format_percentage',
-    'init_session_state'
+    'format_number',
+    'format_datetime',
+    
+    # State Management Functions
+    'init_session_state',
+    'get_state',
+    'set_state',
+    'update_state',
+    'reset_state'
 ]
