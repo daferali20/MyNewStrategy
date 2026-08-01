@@ -1,6 +1,6 @@
 # frontend/utils/__init__.py
 """
-أدوات مساعدة - استيرادات مباشرة
+أدوات مساعدة للواجهة الأمامية
 """
 
 from .helpers import (
@@ -14,8 +14,11 @@ from .helpers import (
     get_sample_data,
     get_sample_analysis,
     is_valid_symbol,
+    get_stock_data_cached,
+    get_stock_info_cached,
     get_stock_data,
-    get_stock_info
+    get_stock_info,
+    get_file_content
 )
 
 from .state import init_session_state, get_state, set_state
@@ -31,8 +34,11 @@ __all__ = [
     'get_sample_data',
     'get_sample_analysis',
     'is_valid_symbol',
+    'get_stock_data_cached',
+    'get_stock_info_cached',
     'get_stock_data',
     'get_stock_info',
+    'get_file_content',
     'init_session_state',
     'get_state',
     'set_state'
