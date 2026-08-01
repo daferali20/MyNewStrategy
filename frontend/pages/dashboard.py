@@ -6,31 +6,30 @@
 
 import pandas as pd
 import streamlit as st
-from frontend.components.charts import create_squeeze_score_chart
-from frontend.utils import (
-    format_currency,
-    get_sample_data,
-    set_state,
-)
-# 1. تثبيت اسم الصفحة في الجلسة عند النقر على أي زر
-def navigate_to(page_name):
-    st.session_state.current_page = page_name
+
+# استيراد آمن للمكونات والدوال المساعدة
+try:
+    from frontend.components.charts import create_squeeze_score_chart
+except ImportError:
+    create_squeeze_score_chart = lambda df: None
+
+try:
+    from frontend.utils.helpers import get_sample_data, set_state
+except ImportError:
+    get_sample_data = lambda: pd.DataFrame()
+    def set_state(key, val):
+        st.session_state[key] = val
+
+
+def navigate_to(page_name: str, symbol: str = None):
+    """
+    دالة التوجيه والتنقل بين الصفحات وتحديث الحالة.
+    """
+    if symbol:
+        set_state('selected_symbol', symbol)
+    set_state('current_page', page_name)
     st.rerun()
 
-# 2. عرض الصفحة بناءً على الحالة المثبتة في st.session_state
-def render_current_page():
-    # استرجاع الصفحة الحالية مع وجود قيمة افتراضية ثابتة
-    page = st.session_state.get('current_page', 'dashboard')
-    
-    pages = {
-        'dashboard': render_dashboard,
-        'scanner': render_scanner,
-        'analyze': render_analyze
-    }
-    
-    # تنفيذ دالة عرض الصفحة المقترنة
-    render_func = pages.get(page, render_dashboard)
-    render_func()
 
 def render():
     """عرض لوحة التحكم الرئيسية"""
@@ -108,28 +107,28 @@ def render():
             else:
                 st.info("لا تتوفر بيانات كافية لرسم المخطط البياني.")
 
-        # أزرار الإجراءات السريعة
+        # أزرار الإجراءات السريعة مع دالة navigate_to
         st.markdown("---")
         act_col1, act_col2 = st.columns(2)
         with act_col1:
             if st.button(
                 f"🔬 تحليل {best_symbol} في صفحة التحليل التفصيلي",
                 use_container_width=True,
+                key="btn_goto_analyze"
             ):
-                set_state('selected_symbol', best_symbol)
-                set_state('current_page', 'analyze')
-                st.rerun()
+                navigate_to('analyze', symbol=best_symbol)
 
         with act_col2:
             if st.button(
-                "🔄 إجبار تحديث نتائج المسح", use_container_width=True
+                "🔄 الانتقال لصفحة المسح الضوئي", 
+                use_container_width=True,
+                key="btn_goto_scanner"
             ):
-                set_state('current_page', 'scanner')
-                st.rerun()
+                navigate_to('scanner')
 
     else:
         st.info(
-            "💡 لم يتم إجراء مسح بعد. اضغط على **'بدء المسح'** للحصول على الفرص المباشرة من السوق."
+            "💡 لم يتم إجراء مسح بعد. يمكنك بدء المسح الضوئي للحصول على الفرص المباشرة من السوق."
         )
 
         # عرض نموذج توضيحي للبيانات المتوقعة
@@ -148,6 +147,6 @@ def render():
                     if st.button(
                         "🚀 الانتقال إلى صفحة المسح الآن",
                         use_container_width=True,
+                        key="btn_start_scan_now"
                     ):
-                        set_state('current_page', 'scanner')
-                        st.rerun()
+                        navigate_to('scanner')
