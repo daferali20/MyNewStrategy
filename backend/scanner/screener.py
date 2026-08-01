@@ -1,6 +1,6 @@
 # backend/scanner/screener.py
 """
-الماسح الذكي للأسهم - فلترة وتحليل متقدم
+الماسح الذكي للأسهم - فلترة وتحليل متقدم (نسخة آمنة ضد أخطاء None)
 """
 
 import sys
@@ -24,7 +24,7 @@ if ROOT_DIR not in sys.path:
 try:
     from backend.data_providers.market_data import USMarketDataProvider
     from backend.analysis.technical import TechnicalAnalyzer
-    from backend.scanner.breakout_scanner import BreakoutScanner, BreakoutIndicators
+    from backend.scanner.breakout_scanner import BreakoutScanner
 except ImportError as e:
     logger.error(f"⚠️ فشل في استيراد الوحدات الداخلية: {e}")
     raise
@@ -48,7 +48,8 @@ class ScanResult:
     
     def to_dict(self) -> Dict:
         data = asdict(self)
-        data['scan_time'] = data['scan_time'].isoformat()
+        if isinstance(data.get('scan_time'), datetime):
+            data['scan_time'] = data['scan_time'].isoformat()
         return data
 
 
@@ -62,27 +63,32 @@ class SmartScanner:
     يقوم بتحليل الأسهم وتصفيتها وفق معايير متعددة
     """
     
-    def __init__(self, symbols: List[str], cache_duration: int = 300):
+    def __init__(self, symbols: Optional[List[str]] = None, cache_duration: int = 300):
         """
         Args:
             symbols: قائمة رموز الأسهم
             cache_duration: مدة صلاحية الكاش بالثواني
         """
-        self.symbols = symbols
+        self.symbols = symbols if symbols is not None else []
         self.cache_duration = cache_duration
-        self._cache = {}
-        self._last_scan = None
-        self.breakout_scanner = BreakoutScanner()
+        self._cache: List[Dict] = []
+        self._last_scan: Optional[datetime] = None
+        
+        try:
+            self.breakout_scanner = BreakoutScanner()
+        except Exception as e:
+            logger.error(f"⚠️ تعذر تهيئة BreakoutScanner: {e}")
+            self.breakout_scanner = None
     
     def _is_cache_valid(self) -> bool:
         """التحقق من صلاحية الكاش"""
-        if self._last_scan is None:
+        if self._last_scan is None or self._cache is None:
             return False
         elapsed = (datetime.now() - self._last_scan).total_seconds()
         return elapsed < self.cache_duration
     
     def _analyze_symbol(self, symbol: str) -> Optional[ScanResult]:
-        """تحليل سهم فردي"""
+        """تحليل سهم فردي بحماية متكاملة"""
         try:
             # 1. جلب البيانات
             provider = USMarketDataProvider(symbol)
@@ -93,33 +99,49 @@ class SmartScanner:
                 return None
             
             # 2. التحليل الفني الأساسي
-            from backend.analysis.technical import TechnicalAnalyzer
             analyzer = TechnicalAnalyzer(df)
             analysis = analyzer.analyze_trend()
             
-            if not analysis or not isinstance(analysis, dict):
+            # حماية مشددة ضد القيمة الخالية None
+            if analysis is None or not isinstance(analysis, dict):
+                logger.warning(f"⚠️ فشل تحليل الاتجاه للسهم {symbol}")
                 return None
             
             # 3. تحليل الانفجار
-            is_breakout, indicators = self.breakout_scanner.analyze(df)
+            is_breakout = False
+            indicators = None
+            if self.breakout_scanner:
+                try:
+                    res = self.breakout_scanner.analyze(df)
+                    if res and isinstance(res, tuple) and len(res) == 2:
+                        is_breakout, indicators = res
+                except Exception as ex:
+                    logger.warning(f"⚠️ خطأ أثناء تحليل الانفجار لـ {symbol}: {ex}")
             
-            # 4. استخراج النتائج
-            rsi = float(analysis.get("rsi_value", 50.0))
-            trend = str(analysis.get("trend", "غير معروف"))
-            macd_signal = str(analysis.get("macd_signal", "محايد"))
-            last_close = df['Close'].iloc[-1]
+            # 4. استخراج النتائج بأمان واستخدام قيم افتراضية
+            rsi = float(analysis.get("rsi_value", 50.0) or 50.0)
+            trend = str(analysis.get("trend", "غير معروف") or "غير معروف")
+            macd_signal = str(analysis.get("macd_signal", "محايد") or "محايد")
             
-            volume_ratio = indicators.volume_ratio if indicators else 1.0
-            breakout_score = indicators.score if indicators and is_breakout else 0.0
+            # التأكد من وجود عمود Close وقراءته بأمان
+            if 'Close' in df.columns and not df['Close'].empty:
+                last_close = float(df['Close'].iloc[-1])
+            else:
+                last_close = float(analysis.get("last_close", 0.0) or 0.0)
+            
+            volume_ratio = float(getattr(indicators, 'volume_ratio', 1.0) or 1.0)
+            
+            score_val = getattr(indicators, 'score', 0.0)
+            breakout_score = float(score_val if (indicators and is_breakout and score_val is not None) else 0.0)
             
             return ScanResult(
-                symbol=symbol,
-                close=round(float(last_close), 2),
+                symbol=str(symbol),
+                close=round(last_close, 2),
                 rsi=round(rsi, 2),
                 trend=trend,
                 macd_signal=macd_signal,
-                volume_ratio=volume_ratio,
-                breakout_score=breakout_score
+                volume_ratio=round(volume_ratio, 2),
+                breakout_score=round(breakout_score, 2)
             )
             
         except Exception as e:
@@ -127,37 +149,31 @@ class SmartScanner:
             return None
     
     def scan_market(self,
-                   min_rsi: float = 0,
-                   max_rsi: float = 100,
-                   trend_filter: str = "الكل",
-                   min_breakout_score: float = 60,
-                   use_cache: bool = True) -> List[Dict]:
+                    min_rsi: float = 0,
+                    max_rsi: float = 100,
+                    trend_filter: str = "الكل",
+                    min_breakout_score: float = 60,
+                    use_cache: bool = True) -> List[Dict]:
         """
         مسح السوق وتصفية الأسهم حسب المعايير
-        
-        Args:
-            min_rsi: الحد الأدنى لـ RSI
-            max_rsi: الحد الأقصى لـ RSI
-            trend_filter: "الكل" أو "صاعد" أو "هابط" أو "جانبي"
-            min_breakout_score: الحد الأدنى لدرجة الانفجار
-            use_cache: استخدام النتائج المخزنة مؤقتاً
-        
-        Returns:
-            قائمة بالنتائج كقاموس
         """
         if use_cache and self._is_cache_valid():
             logger.info("📦 استخدام النتائج المخزنة مؤقتاً")
-            return self._cache
+            return self._cache if isinstance(self._cache, list) else []
         
+        if not self.symbols:
+            logger.warning("⚠️ لا توجد رموز أسهم في الماسح.")
+            return []
+            
         logger.info(f"🔍 بدء مسح {len(self.symbols)} سهماً...")
-        results = []
+        results: List[Dict] = []
         
         for sym in self.symbols:
             result = self._analyze_symbol(sym)
             if result is None:
                 continue
             
-            # تطبيق شروط الفلترة
+            # تطبيق شروط الفلترة بأسلوب آمن
             if min_rsi <= result.rsi <= max_rsi:
                 if trend_filter == "الكل" or (trend_filter in result.trend):
                     if result.breakout_score >= min_breakout_score:
@@ -171,25 +187,32 @@ class SmartScanner:
         
         return results
     
-    def get_summary(self, results: List[Dict]) -> Dict:
+    def get_summary(self, results: Optional[List[Dict]] = None) -> Dict:
         """الحصول على ملخص للنتائج"""
-        if not results:
+        target_results = results if results is not None else self._cache
+        
+        if not target_results or not isinstance(target_results, list):
             return {"count": 0, "avg_rsi": 0, "avg_breakout_score": 0, "trends": {}}
         
-        rsi_values = [r.get("rsi", 0) for r in results]
-        breakout_scores = [r.get("breakout_score", 0) for r in results]
+        # استخراج القيم الموثوقة واستبعاد العناصر الفاسدة إن وجدت
+        valid_items = [r for r in target_results if isinstance(r, dict)]
+        if not valid_items:
+            return {"count": 0, "avg_rsi": 0, "avg_breakout_score": 0, "trends": {}}
+
+        rsi_values = [float(r.get("rsi", 0) or 0) for r in valid_items]
+        breakout_scores = [float(r.get("breakout_score", 0) or 0) for r in valid_items]
         
         trends = {}
-        for r in results:
-            trend = r.get("trend", "غير معروف")
+        for r in valid_items:
+            trend = str(r.get("trend", "غير معروف") or "غير معروف")
             trends[trend] = trends.get(trend, 0) + 1
         
         return {
-            "count": len(results),
-            "avg_rsi": round(sum(rsi_values) / len(rsi_values), 2),
-            "avg_breakout_score": round(sum(breakout_scores) / len(breakout_scores), 2),
-            "min_rsi": min(rsi_values),
-            "max_rsi": max(rsi_values),
+            "count": len(valid_items),
+            "avg_rsi": round(sum(rsi_values) / len(rsi_values), 2) if rsi_values else 0,
+            "avg_breakout_score": round(sum(breakout_scores) / len(breakout_scores), 2) if breakout_scores else 0,
+            "min_rsi": min(rsi_values) if rsi_values else 0,
+            "max_rsi": max(rsi_values) if rsi_values else 0,
             "trends": trends,
             "scan_time": datetime.now().isoformat()
         }
@@ -200,9 +223,9 @@ class SmartScanner:
 # ============================================================================
 
 def quick_scan(symbols: List[str],
-              min_rsi: int = 50,
-              max_rsi: int = 70,
-              min_score: float = 65) -> List[Dict]:
+               min_rsi: int = 50,
+               max_rsi: int = 70,
+               min_score: float = 65) -> List[Dict]:
     """دالة سريعة للمسح بمعايير افتراضية"""
     scanner = SmartScanner(symbols)
     return scanner.scan_market(
@@ -215,23 +238,30 @@ def quick_scan(symbols: List[str],
 
 def scan_from_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """مسح من DataFrame مباشرة"""
-    scanner = BreakoutScanner()
-    results = []
-    
-    # محاكاة تحليل كل سهم (في الواقع df يحتوي على بيانات سهم واحد)
-    is_breakout, indicators = scanner.analyze(df)
-    
-    if is_breakout and indicators:
-        results.append({
-            'is_breakout': True,
-            'score': indicators.score,
-            'squeeze': indicators.is_squeeze,
-            'volume_ratio': indicators.volume_ratio,
-            'rsi': indicators.rsi,
-            'entry': indicators.entry_point,
-            'stop_loss': indicators.stop_loss,
-            'target_1': indicators.target_1,
-            'target_2': indicators.target_2
-        })
-    
-    return pd.DataFrame(results)
+    if df is None or df.empty:
+        return pd.DataFrame()
+        
+    try:
+        scanner = BreakoutScanner()
+        results = []
+        
+        res = scanner.analyze(df)
+        if res and isinstance(res, tuple) and len(res) == 2:
+            is_breakout, indicators = res
+            if is_breakout and indicators:
+                results.append({
+                    'is_breakout': True,
+                    'score': getattr(indicators, 'score', 0),
+                    'squeeze': getattr(indicators, 'is_squeeze', False),
+                    'volume_ratio': getattr(indicators, 'volume_ratio', 1.0),
+                    'rsi': getattr(indicators, 'rsi', 50.0),
+                    'entry': getattr(indicators, 'entry_point', 0.0),
+                    'stop_loss': getattr(indicators, 'stop_loss', 0.0),
+                    'target_1': getattr(indicators, 'target_1', 0.0),
+                    'target_2': getattr(indicators, 'target_2', 0.0)
+                })
+        
+        return pd.DataFrame(results)
+    except Exception as e:
+        logger.error(f"⚠️ خطأ في scan_from_dataframe: {e}")
+        return pd.DataFrame()
