@@ -1,7 +1,7 @@
 # app.py
 """
 التطبيق الرئيسي - الماسح الضوئي للأسهم
-نسخة محسنة مع تحسينات الأداء والتصميم
+نسخة محسنة مع استخدام width بدلاً من use_container_width
 """
 
 import streamlit as st
@@ -397,7 +397,7 @@ class SmartScanner:
     return default_content.get(filename, f"# الملف: {filename}\n\nالمحتوى غير متوفر")
 
 # ============================================================================
-# مكونات الواجهة
+# مكونات الواجهة - مع تحديث width
 # ============================================================================
 
 def render_sidebar():
@@ -450,9 +450,10 @@ def render_sidebar():
             help="عدد الأسهم التي سيتم مسحها (زيادة العدد تزيد وقت المسح)"
         )
         
+        # تحديث: استخدام width بدلاً من use_container_width
         scan_clicked = st.button(
             "🔍 ابدأ المسح", 
-            use_container_width=True, 
+            width="stretch",  # تم التحديث من use_container_width=True
             type="primary",
             key="scan_button"
         )
@@ -542,7 +543,7 @@ def render_dashboard():
                 "time_to_breakout": st.column_config.TextColumn("التوقيت"),
                 "volume_ratio": st.column_config.NumberColumn("مضاعف الحجم", format="%.1fx")
             },
-            use_container_width=True,
+            width="stretch",  # تم التحديث من use_container_width=True
             hide_index=True
         )
         
@@ -562,7 +563,7 @@ def render_dashboard():
                 'احتمالية الانفجار': ['85%', '72%', '68%', '55%', '48%'],
                 'المخاطرة': ['منخفضة', 'متوسطة', 'منخفضة', 'متوسطة', 'مرتفعة']
             })
-            st.dataframe(sample_data, use_container_width=True, hide_index=True)
+            st.dataframe(sample_data, width="stretch", hide_index=True)  # تم التحديث
 
 def render_scanner():
     """صفحة مسح السوق"""
@@ -585,7 +586,8 @@ def render_scanner():
     # زر التحديث
     col1, col2 = st.columns([1, 4])
     with col1:
-        refresh = st.button("🔄 تحديث", type="primary", key="refresh_scan", use_container_width=True)
+        # تحديث: استخدام width بدلاً من use_container_width
+        refresh = st.button("🔄 تحديث", type="primary", key="refresh_scan", width="stretch")
     
     if refresh:
         with st.spinner("🔍 جاري مسح السوق..."):
@@ -609,7 +611,7 @@ def render_scanner():
         st.subheader(f"📊 النتائج ({len(st.session_state.scan_results)})")
         st.dataframe(
             st.session_state.scan_results,
-            use_container_width=True,
+            width="stretch",  # تم التحديث
             hide_index=True
         )
         
@@ -617,19 +619,22 @@ def render_scanner():
         col1, col2, col3 = st.columns(3)
         with col1:
             csv = st.session_state.scan_results.to_csv(index=False)
+            # تحديث: استخدام width بدلاً من use_container_width
             st.download_button(
                 "📥 تحميل CSV",
                 csv,
                 f"scan_results_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                 "text/csv",
                 key="download_csv",
-                use_container_width=True
+                width="stretch"
             )
         with col2:
-            if st.button("📋 نسخ", use_container_width=True):
+            # تحديث: استخدام width بدلاً من use_container_width
+            if st.button("📋 نسخ", width="stretch"):
                 st.toast("✅ تم نسخ النتائج!")
         with col3:
-            if st.button("📧 مشاركة", use_container_width=True):
+            # تحديث: استخدام width بدلاً من use_container_width
+            if st.button("📧 مشاركة", width="stretch"):
                 st.toast("📧 تم فتح مشاركة النتائج!")
 
 def render_file_explorer():
@@ -688,7 +693,8 @@ def render_file_explorer():
         
         st.code(content, language=lang)
         
-        if st.button("❌ إغلاق", key="close_file"):
+        # تحديث: استخدام width بدلاً من use_container_width
+        if st.button("❌ إغلاق", key="close_file", width="stretch"):
             st.session_state.show_file = False
             st.session_state.selected_file = None
             st.rerun()
@@ -753,7 +759,7 @@ def render_analyze():
                 }
                 
                 fig = create_candlestick_chart(df, symbol, entry_points)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True)  # Plotly لا يزال يستخدم use_container_width
             
             with col2:
                 # إحصائيات سريعة
