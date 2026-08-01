@@ -1,183 +1,231 @@
 # backend/explosive_moves/smart_money.py
 """
-محلل السيولة الذكية (Smart Money Analyzer)
-يكشف تحركات السيولة الذكية والكبار
+محلل السيولة الذكية (Smart Money Analyzer Module)
+يكشف تحركات السيولة الذكية وكبار المؤسسات (Accumulation/Distribution & VSA Patterns)
 """
 
-import pandas as pd
+from typing import Dict, List, Tuple, Union
 import numpy as np
-from typing import Dict, List, Tuple
+import pandas as pd
+
 
 class SmartMoneyAnalyzer:
-    """
-    تحليل سلوك السيولة الذكية باستخدام أنماط الحجم والسعر
-    """
-    
+    """تحليل سلوك السيولة الذكية باستخدام أنماط الحجم والسعر (Volume Spread Analysis)"""
+
     def __init__(self, lookback: int = 30):
+        """
+        Args:
+            lookback: عدد الشموع السابقة المستخدمة في التحليل
+        """
         self.lookback = lookback
-    
-    def analyze(self, df: pd.DataFrame) -> Dict:
-        """
-        تحليل السيولة الذكية
-        
+
+    def _get_column(self, df: pd.DataFrame, col_name: str) -> pd.Series:
+        """استخراج العمود بغض النظر عن حالة الأحرف (كبيرة/صغيرة)"""
+        col_lower = col_name.lower()
+        col_upper = col_name.capitalize()
+
+        if col_lower in df.columns:
+            return df[col_lower]
+        elif col_upper in df.columns:
+            return df[col_upper]
+        elif col_name in df.columns:
+            return df[col_name]
+        return pd.Series(dtype=float)
+
+    def analyze(self, df: pd.DataFrame) -> Dict[str, Union[float, bool, list, str]]:
+        """تحليل حركة وتمركزات السيولة الذكية
+
         Returns:
-            قاموس يحتوي على:
-            - smart_money_score: float (0-100)
-            - accumulation: bool
-            - distribution: bool
-            - buy_pressure: float
-            - sell_pressure: float
-            - patterns: List[str]
+            Dict يحتوي على درجة السيولة الذكية، ضغط الشراء/البيع، حالة التجميع/التوزيع، والأنماط المكتشفة
         """
-        if df.empty or len(df) < self.lookback:
-            return {'error': 'بيانات غير كافية'}
-        
+        if df is None or df.empty or len(df) < self.lookback:
+            return {'error': 'بيانات غير كافية لتحليل السيولة الذكية'}
+
         try:
-            close = df['Close']
-            high = df['High']
-            low = df['Low']
-            volume = df['Volume']
-            
-            # حساب ضغط الشراء والبيع
+            close = self._get_column(df, 'close')
+            high = self._get_column(df, 'high')
+            low = self._get_column(df, 'low')
+            volume = self._get_column(df, 'volume')
+
+            if close.empty or high.empty or low.empty or volume.empty:
+                return {'error': 'أعمدة الأسعار والحجم غير مكتملة'}
+
+            # 1. حساب ضغط الشراء والبيع
             buy_pressure, sell_pressure = self._calculate_pressure(df)
-            
-            # كشف التراكم
+
+            # 2. كشف التراكم (Accumulation) والتوزيع (Distribution)
             accumulation = self._detect_accumulation(df)
-            
-            # كشف التوزيع
             distribution = self._detect_distribution(df)
-            
-            # الأنماط
+
+            # 3. كشف أنماط VSA
             patterns = self._detect_patterns(df)
-            
-            # حساب درجة السيولة الذكية
+
+            # 4. حساب درجة السيولة الذكية (0 - 100)
             smart_score = self._calculate_smart_score(
                 buy_pressure, sell_pressure, accumulation, distribution, patterns
             )
-            
+
+            # 5. بناء التقرير والإشارة
+            signal = self._get_signal(smart_score, accumulation, distribution)
+
             return {
-                'smart_money_score': round(smart_score, 2),
-                'accumulation': accumulation,
-                'distribution': distribution,
-                'buy_pressure': round(buy_pressure, 2),
-                'sell_pressure': round(sell_pressure, 2),
+                'smart_money_score': round(float(smart_score), 2),
+                'accumulation': bool(accumulation),
+                'distribution': bool(distribution),
+                'buy_pressure': round(float(buy_pressure), 2),
+                'sell_pressure': round(float(sell_pressure), 2),
                 'patterns': patterns,
-                'signal': self._get_signal(smart_score, accumulation, distribution)
+                'signal': signal,
             }
-            
+
         except Exception as e:
-            return {'error': str(e)}
-    
+            return {'error': f'حدث خطأ أثناء تحليل السيولة الذكية: {str(e)}'}
+
     def _calculate_pressure(self, df: pd.DataFrame) -> Tuple[float, float]:
-        """حساب ضغط الشراء والبيع"""
-        close = df['Close']
-        low = df['Low']
-        high = df['High']
-        volume = df['Volume']
-        
-        # مؤشر ضغط الشراء
-        buying_volume = volume[close > close.shift()]
-        selling_volume = volume[close < close.shift()]
-        
-        total_volume = volume.iloc[-20:].sum()
-        buy_volume = buying_volume.iloc[-20:].sum()
-        sell_volume = selling_volume.iloc[-20:].sum()
-        
-        buy_pressure = (buy_volume / total_volume * 100) if total_volume > 0 else 50
-        sell_pressure = (sell_volume / total_volume * 100) if total_volume > 0 else 50
-        
+        """حساب ضغط الشراء والبيع بناءً على أحجام التداول الحجمية"""
+        close = self._get_column(df, 'close')
+        volume = self._get_column(df, 'volume')
+
+        window = min(len(df), 20)
+        recent_close = close.iloc[-window:]
+        recent_volume = volume.iloc[-window:]
+
+        price_diff = recent_close.diff()
+
+        # أحجام الأيام الصاعدة vs الهابطة
+        buying_volume = recent_volume[price_diff > 0].sum()
+        selling_volume = recent_volume[price_diff < 0].sum()
+
+        total_volume = buying_volume + selling_volume
+
+        if total_volume > 0:
+            buy_pressure = (buying_volume / total_volume) * 100.0
+            sell_pressure = (selling_volume / total_volume) * 100.0
+        else:
+            buy_pressure = 50.0
+            sell_pressure = 50.0
+
         return buy_pressure, sell_pressure
-    
+
     def _detect_accumulation(self, df: pd.DataFrame) -> bool:
-        """كشف التراكم (شراء تدريجي)"""
-        close = df['Close']
-        volume = df['Volume']
-        
-        # انخفاض في السعر مع زيادة في الحجم (شراء عند الانخفاض)
-        price_down = close.pct_change() < -0.01
-        volume_up = volume.pct_change() > 0.2
-        
-        accumulation_signals = (price_down & volume_up).iloc[-10:].sum()
-        
-        return accumulation_signals >= 3
-    
+        """كشف مرحلة التجميع (امتصاص العروض بحجم مرتفع واستقرار السعر)"""
+        close = self._get_column(df, 'close')
+        volume = self._get_column(df, 'volume')
+
+        window = min(len(df), 15)
+        recent_close = close.iloc[-window:]
+        recent_volume = volume.iloc[-window:]
+
+        avg_vol = volume.mean()
+
+        # الشراء عند الانخفاض / الامتصاص: انخفاض ضئيل في السعر مع أحجام فاعلة أعلى من المتوسط
+        price_change = recent_close.pct_change()
+        absorption_candles = (price_change > -0.015) & (price_change < 0.005) & (recent_volume > avg_vol * 1.2)
+
+        return int(absorption_candles.sum()) >= 2
+
     def _detect_distribution(self, df: pd.DataFrame) -> bool:
-        """كشف التوزيع (بيع تدريجي)"""
-        close = df['Close']
-        volume = df['Volume']
-        
-        # ارتفاع في السعر مع زيادة في الحجم (بيع عند الارتفاع)
-        price_up = close.pct_change() > 0.01
-        volume_up = volume.pct_change() > 0.2
-        
-        distribution_signals = (price_up & volume_up).iloc[-10:].sum()
-        
-        return distribution_signals >= 3
-    
+        """كشف مرحلة التوزيع (تفريغ الكميات مع ضعف الصعود أو الهبوط الحاد بحجم ضخم)"""
+        close = self._get_column(df, 'close')
+        volume = self._get_column(df, 'volume')
+
+        window = min(len(df), 15)
+        recent_close = close.iloc[-window:]
+        recent_volume = volume.iloc[-window:]
+
+        avg_vol = volume.mean()
+
+        price_change = recent_close.pct_change()
+
+        # التوزيع: ارتفاعات طفيفة جداً مع حجم تداول هائل (عدم قدرة على الدفع لأعلى) أو كسر هابط بحجم ضخم
+        buying_climax = (price_change >= 0.0) & (price_change < 0.005) & (recent_volume > avg_vol * 1.5)
+        heavy_selling = (price_change < -0.015) & (recent_volume > avg_vol * 1.3)
+
+        distribution_signals = buying_climax | heavy_selling
+        return int(distribution_signals.sum()) >= 2
+
     def _detect_patterns(self, df: pd.DataFrame) -> List[str]:
-        """كشف أنماط السيولة الذكية"""
+        """كشف أنماط سلوك كبار السلسلة (VSA Patterns)"""
         patterns = []
-        close = df['Close']
-        volume = df['Volume']
-        
-        # نمط 1: حجم مرتفع مع نطاق سعري ضيق
-        recent_range = (df['High'].iloc[-5:] - df['Low'].iloc[-5:]).mean()
-        avg_range = (df['High'] - df['Low']).iloc[-20:-5].mean()
-        if volume.iloc[-5:].mean() > volume.iloc[-20:-5].mean() * 1.5:
-            if recent_range < avg_range * 0.5:
-                patterns.append("تراكم في نطاق ضيق")
-        
-        # نمط 2: كسر مع حجم مرتفع
-        if volume.iloc[-1] > volume.iloc[-5:-1].mean() * 2:
-            if close.iloc[-1] > close.iloc[-5:-1].max():
-                patterns.append("كسر صاعد بحجم مرتفع")
-            elif close.iloc[-1] < close.iloc[-5:-1].min():
-                patterns.append("كسر هابط بحجم مرتفع")
-        
-        # نمط 3: شمعة انعكاس مع حجم
-        if len(df) > 2:
-            if close.iloc[-1] > close.iloc[-2] * 1.02:
-                if volume.iloc[-1] > volume.iloc[-2] * 1.3:
-                    patterns.append("شمعة صاعدة قوية")
-            elif close.iloc[-1] < close.iloc[-2] * 0.98:
-                if volume.iloc[-1] > volume.iloc[-2] * 1.3:
-                    patterns.append("شمعة هابطة قوية")
-        
+        close = self._get_column(df, 'close')
+        high = self._get_column(df, 'high')
+        low = self._get_column(df, 'low')
+        volume = self._get_column(df, 'volume')
+
+        if len(df) < 20:
+            return ["لا توجد بيانات كافية للأنماط"]
+
+        avg_vol_20 = volume.iloc[-20:-1].mean()
+        avg_range_20 = (high - low).iloc[-20:-1].mean()
+
+        recent_range_5 = (high.iloc[-5:] - low.iloc[-5:]).mean()
+        recent_vol_5 = volume.iloc[-5:].mean()
+
+        # 1. نمط التجميع في نطاق ضيق (Narrow Range Absorption)
+        if recent_vol_5 > avg_vol_20 * 1.3 and recent_range_5 < avg_range_20 * 0.6:
+            patterns.append("تراكم في نطاق ضيق (امتصاص)")
+
+        # 2. نمط الاختراق القوي بحجم مؤسسي
+        last_vol = volume.iloc[-1]
+        last_close = close.iloc[-1]
+
+        if last_vol > avg_vol_20 * 1.8:
+            if last_close > close.iloc[-6:-1].max():
+                patterns.append("اختراق صاعد بحجم مؤسسي")
+            elif last_close < close.iloc[-6:-1].min():
+                patterns.append("كسر هابط بحجم مؤسسي")
+
+        # 3. نمط شمعة الابتلاع / الانعكاس بحجم مرتفع
+        if len(df) >= 2:
+            prev_close = close.iloc[-2]
+            if last_close > prev_close * 1.015 and last_vol > volume.iloc[-2] * 1.25:
+                patterns.append("اندفاع شرائي قوي")
+            elif last_close < prev_close * 0.985 and last_vol > volume.iloc[-2] * 1.25:
+                patterns.append("اندفاع بيعي قوي")
+
         return patterns if patterns else ["لا توجد أنماط واضحة"]
-    
-    def _calculate_smart_score(self, buy: float, sell: float, 
-                               accumulation: bool, distribution: bool,
-                               patterns: List[str]) -> float:
-        """حساب درجة السيولة الذكية"""
-        score = 50  # قيمة محايدة
-        
-        # ضغط الشراء والبيع
+
+    def _calculate_smart_score(
+        self,
+        buy: float,
+        sell: float,
+        accumulation: bool,
+        distribution: bool,
+        patterns: List[str],
+    ) -> float:
+        """حساب درجة المحفظة والسيولة الذكية"""
+        score = 50.0  # القيمة المحايدة
+
+        # تأثير ضغط التداول
         if buy > 60:
-            score += 15
+            score += 15.0
         elif sell > 60:
-            score -= 15
-        
-        # التراكم والتوزيع
+            score -= 15.0
+
+        # تأثير التراكم / التوزيع
         if accumulation:
-            score += 20
+            score += 20.0
         if distribution:
-            score -= 20
-        
-        # الأنماط
-        if len(patterns) > 1:
-            score += 10
-        
-        return max(0, min(100, score))
-    
+            score -= 20.0
+
+        # تأكيد الأنماط
+        bullish_patterns = [p for p in patterns if "صاعد" in p or "شرائي" in p or "تراكم" in p]
+        bearish_patterns = [p for p in patterns if "هابط" in p or "بيعي" in p]
+
+        score += len(bullish_patterns) * 7.0
+        score -= len(bearish_patterns) * 7.0
+
+        return float(np.clip(score, 0.0, 100.0))
+
     def _get_signal(self, score: float, accumulation: bool, distribution: bool) -> str:
-        """تحديد الإشارة بناءً على التحليل"""
-        if score > 70 and accumulation:
-            return "شراء قوي"
-        elif score > 60 and accumulation:
+        """تحديد توصية وإشارة السيولة الذكية"""
+        if score >= 75 and accumulation:
+            return "شراء قوي (تراكم مؤسسي)"
+        elif score >= 60:
             return "شراء"
-        elif score < 30 and distribution:
-            return "بيع قوي"
-        elif score < 40 and distribution:
+        elif score <= 25 and distribution:
+            return "بيع قوي (توزيع مؤسسي)"
+        elif score <= 40:
             return "بيع"
         else:
             return "محايد"
