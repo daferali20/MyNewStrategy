@@ -1,7 +1,7 @@
 # app.py
 """
-التطبيق الرئيسي - الماسح الضوئي للأسهم
-تم التحديث وتأمين العمليات ضد الكراش وتعارض المتغيرات
+التطبيق الرئيسي - الماسح الضوئي للأسهم المتفجرة
+مؤمن ضد الكراش، ومعالج لدورة حياة الجلسة (Session State Management)
 """
 
 import streamlit as st
@@ -11,8 +11,12 @@ from datetime import datetime
 import pandas as pd
 
 # ============================================================================
-# إعدادات الصفحة
+# 1. إعدادات المسارات والصفحة (Page Setup & Path Isolation)
 # ============================================================================
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+if ROOT_DIR not in sys.path:
+    sys.path.append(ROOT_DIR)
 
 st.set_page_config(
     page_title="الماسح الضوئي للأسهم | Breakout Scanner",
@@ -21,17 +25,18 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# إضافة المسارات
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-if ROOT_DIR not in sys.path:
-    sys.path.append(ROOT_DIR)
+# محاولة استيراد الإعدادات المركزية
+try:
+    from config import DEFAULT_SETTINGS
+except ImportError:
+    DEFAULT_SETTINGS = {'min_score': 70, 'min_prob': 55, 'max_symbols': 15, 'sector': 'الكل'}
 
 # ============================================================================
-# تهيئة حالة الجلسة
+# 2. تهيئة حالة الجلسة (Session State Initialization)
 # ============================================================================
 
 def init_session_state():
-    """تهيئة جميع متغيرات الجلسة"""
+    """تهيئة جميع متغيرات الجلسة تلقائياً"""
     defaults = {
         'scan_results': pd.DataFrame(),
         'current_page': 'dashboard',
@@ -49,23 +54,23 @@ def init_session_state():
         st.session_state.initialized = True
 
 # ============================================================================
-# استيراد المكونات - مع معالجة الأخطاء
+# 3. استيراد المكونات محلياً مع التراجعات الآمنة (Fallback Handling)
 # ============================================================================
 
-# استيراد الأدوات المساعدة
+# الأدوات المساعدة والتصميم
 try:
     from frontend.utils.helpers import load_css, get_sample_data
 except ImportError:
     load_css = lambda: None
     get_sample_data = lambda: pd.DataFrame()
 
-# استيراد الشريط الجانبي
+# الشريط الجانبي
 try:
     from frontend.components.sidebar import render_sidebar
 except ImportError:
     render_sidebar = lambda: {}
 
-# استيراد الصفحات - استخدام try/except لكل صفحة
+# صفحات التطبيق
 try:
     from frontend.pages.dashboard import render as render_dashboard
 except ImportError:
@@ -82,135 +87,77 @@ except ImportError:
     render_analyze = lambda: st.warning("⚠️ صفحة التحليل غير متوفرة")
 
 # ============================================================================
-# دوال مساعدة إضافية
+# 4. الدوال المساعدة للبيانات العشوائية/الاحتياطية
 # ============================================================================
 
-def get_stock_data(symbol, period="6mo"):
-    """جلب بيانات السهم - بديل في حالة عدم توفر المصادر"""
-    try:
-        import yfinance as yf
-        ticker = yf.Ticker(symbol)
-        df = ticker.history(period=period)
-        return df if not df.empty else pd.DataFrame()
-    except Exception:
-        return pd.DataFrame()
-
-def get_sample_analysis(symbol="AAPL"):
-    """تحليل نموذجي للعرض"""
-    return {
-        'squeeze_score': 75,
-        'breakout_probability': 68,
-        'expected_upside': 12.5,
-        'risk_level': 'متوسط',
-        'time_to_breakout': 'خلال أيام',
-        'entry_points': {
-            'current_price': 175.34,
-            'entry_point': 178.50,
-            'stop_loss': 170.00,
-            'target_1': 190.00,
-            'target_2': 200.00
-        }
-    }
-
 def mock_scan(sector=None, min_score=60, min_prob=55, max_symbols=20):
-    """دالة مسح نموذجية"""
+    """دالة مسح نموذجية في حال تعذر الاتصال بمحركات التحليل"""
     return get_sample_data()
 
 # ============================================================================
-# التطبيق الرئيسي
+# 5. دوال عرض الواجهات ومعالجة الأحداث
 # ============================================================================
 
-def main():
-    """الدالة الرئيسية للتطبيق"""
-    
-    # 1. تهيئة حالة الجلسة
-    init_session_state()
-    
-    # 2. تحميل التصميم
-    try:
-        load_css()
-    except Exception:
-        pass
-    
-    # 3. عرض الهيدر
-    render_header()
-    
-    # 4. عرض الشريط الجانبي
-    try:
-        render_sidebar()
-    except Exception as e:
-        st.sidebar.error(f"خطأ في الشريط الجانبي: {e}")
-    
-    # 5. معالجة المسح
-    handle_scan()
-    
-    # 6. عرض الصفحة المختارة
-    render_current_page()
-
 def render_header():
-    """عرض الهيدر الرئيسي"""
+    """عرض الهيدر الرئيسي للتطبيق"""
     st.markdown("""
-    <div class="main-header">
-        <h1>🚀 الماسح الضوئي للأسهم المتفجرة</h1>
-        <p>اكتشاف فرص الانفجار السعري باستخدام الذكاء الاصطناعي وتحليل الضغط (Squeeze)</p>
+    <div class="main-header" style="text-align: right; padding: 1rem 0; margin-bottom: 2rem;">
+        <h1 style="color: #667eea; font-weight: 800;">🚀 الماسح الضوئي للأسهم المتفجرة</h1>
+        <p style="color: #94a3b8; font-size: 1.1rem;">اكتشاف فرص الانفجار السعري باستعمال نماذج الذكاء الاصطناعي ومؤشرات الضغط (Squeeze)</p>
     </div>
     """, unsafe_allow_html=True)
 
 def handle_scan():
-    """معالجة طلب المسح بأعلى قدر من الحماية"""
+    """معالجة أمر تنفيذ المسح بنمط حماية ثلاثي الأبعاد"""
     config = st.session_state.get('sidebar_config', {})
     
     if config and config.get('scan_clicked', False):
         if not st.session_state.get('scan_in_progress', False):
             st.session_state.scan_in_progress = True
             
-            # محاولة استخدام محركات المسح بالتدرج
+            # 1. محاولة اختيار المحرك الأنسب للمسح
             scan_function = None
             
-            # المحرك الأول: الذكاء الاصطناعي الأساسي
             try:
                 from backend.scanner.ai_breakout_analyzer import scan_market_ai
                 scan_function = scan_market_ai
             except ImportError:
-                pass
-
-            # المحرك الثاني: محرك الحركات السعرية المتفجرة Integration
-            if scan_function is None:
                 try:
                     from backend.explosive_moves.integration import analyze_explosive_potential
                     scan_function = lambda **kwargs: mock_scan(**kwargs)
                 except ImportError:
-                    pass
+                    scan_function = mock_scan
 
-            # المحرك الاحتياطي الأخير
-            if scan_function is None:
-                scan_function = mock_scan
-
-            with st.spinner("🔍 جاري مسح السوق..."):
+            # 2. تنفيذ العملية مع شريط التقدم
+            with st.spinner("🔍 جاري مسح السوق والتحليل الفني للأسهم..."):
                 try:
                     results = scan_function(
-                        sector=config.get('sector'),
-                        min_score=config.get('min_score', 70),
-                        min_prob=config.get('min_prob', 55),
-                        max_symbols=config.get('max_symbols', 15)
+                        sector=config.get('sector', DEFAULT_SETTINGS.get('sector')),
+                        min_score=config.get('min_score', DEFAULT_SETTINGS.get('min_score', 70)),
+                        min_prob=config.get('min_prob', DEFAULT_SETTINGS.get('min_prob', 55)),
+                        max_symbols=config.get('max_symbols', DEFAULT_SETTINGS.get('max_symbols', 15))
                     )
                     
                     if results is not None and isinstance(results, pd.DataFrame) and not results.empty:
                         st.session_state.scan_results = results
                         st.session_state.last_scan_time = datetime.now().strftime('%H:%M:%S')
-                        st.toast(f"✅ تم العثور على {len(results)} فرصة!")
+                        st.toast(f"✅ تم العثور على {len(results)} فرصة واعدة!", icon="🔥")
                     else:
                         st.session_state.scan_results = pd.DataFrame()
-                        st.toast("⚠️ لا توجد نتائج مطابقة للمعايير الحالية")
+                        st.toast("⚠️ لا توجد نتائج مطابقة للمحددات الحالية", icon="🔍")
                 except Exception as e:
-                    st.error(f"⚠️ حدث خطأ أثناء تنفيذ الفحص: {e}")
+                    st.error(f"⚠️ حدث خطأ أثناء تنفيذ عملية المسح: {e}")
 
-            # إعادة ضبط الحالة بأمان
+            # 3. إعادة إرسال المتغيرات والتفريغ الأمني
             st.session_state.scan_in_progress = False
             st.session_state.sidebar_config['scan_clicked'] = False
+            
+            # التوجيه التلقائي لصفحة المسح للرؤية المباشرة
+            st.session_state.current_page = 'scanner'
+            st.rerun()
 
 def render_current_page():
-    """عرض الصفحة المختارة"""
+    """عرض الصفحة المختارة وفق الجلسة الحالية"""
     page = st.session_state.get('current_page', 'dashboard')
     
     pages = {
@@ -219,12 +166,40 @@ def render_current_page():
         'analyze': render_analyze
     }
     
-    # عرض الصفحة المختارة
     render_func = pages.get(page, render_dashboard)
     try:
         render_func()
     except Exception as e:
-        st.error(f"⚠️ حدث خطأ أثناء عرض الصفحة: {e}")
+        st.error(f"⚠️ حدث خطأ غير متوقع أثناء عرض الصفحة ({page}): {e}")
+
+# ============================================================================
+# 6. النقطة الرئيسية للتشغيل (Main Loop)
+# ============================================================================
+
+def main():
+    """الدالة الرئيسية لإدارة التدفق التفاعلي"""
+    # 1. التهيئة الأولية
+    init_session_state()
+    
+    # 2. تطبيق قواعد الـ CSS
+    try:
+        load_css()
+    except Exception:
+        pass
+    
+    # 3. الهيدر والشريط الجانبي
+    render_header()
+    
+    try:
+        render_sidebar()
+    except Exception as e:
+        st.sidebar.error(f"خطأ في تحميل الشريط الجانبي: {e}")
+    
+    # 4. معالجة طلبات البحث والمسح
+    handle_scan()
+    
+    # 5. عرض محتوى الصفحة المقترنة
+    render_current_page()
 
 if __name__ == "__main__":
     main()
