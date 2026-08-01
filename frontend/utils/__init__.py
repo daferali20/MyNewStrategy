@@ -1,9 +1,8 @@
 # frontend/utils/__init__.py
 """
-أدوات مساعدة للواجهة الأمامية
+أدوات مساعدة - استيرادات مباشرة
 """
 
-# استيرادات بسيطة لتجنب الدائرية
 from .helpers import (
     load_css,
     load_inline_css,
@@ -14,11 +13,12 @@ from .helpers import (
     format_volume,
     get_sample_data,
     get_sample_analysis,
-    is_valid_symbol
+    is_valid_symbol,
+    get_stock_data,
+    get_stock_info
 )
 
-# استيرادات البيانات - يتم استيرادها عند الحاجة
-# لتجنب الدائرية، نستوردها بشكل منفصل
+from .state import init_session_state, get_state, set_state
 
 __all__ = [
     'load_css',
@@ -30,5 +30,10 @@ __all__ = [
     'format_volume',
     'get_sample_data',
     'get_sample_analysis',
-    'is_valid_symbol'
+    'is_valid_symbol',
+    'get_stock_data',
+    'get_stock_info',
+    'init_session_state',
+    'get_state',
+    'set_state'
 ]
