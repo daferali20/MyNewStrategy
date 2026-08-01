@@ -12,7 +12,25 @@ from frontend.utils import (
     get_sample_data,
     set_state,
 )
+# 1. تثبيت اسم الصفحة في الجلسة عند النقر على أي زر
+def navigate_to(page_name):
+    st.session_state.current_page = page_name
+    st.rerun()
 
+# 2. عرض الصفحة بناءً على الحالة المثبتة في st.session_state
+def render_current_page():
+    # استرجاع الصفحة الحالية مع وجود قيمة افتراضية ثابتة
+    page = st.session_state.get('current_page', 'dashboard')
+    
+    pages = {
+        'dashboard': render_dashboard,
+        'scanner': render_scanner,
+        'analyze': render_analyze
+    }
+    
+    # تنفيذ دالة عرض الصفحة المقترنة
+    render_func = pages.get(page, render_dashboard)
+    render_func()
 
 def render():
     """عرض لوحة التحكم الرئيسية"""
