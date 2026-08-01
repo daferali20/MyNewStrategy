@@ -1,6 +1,6 @@
 # frontend/pages/dashboard.py
 """
-صفحة لوحة التحكم - تم إصلاح use_container_width
+صفحة لوحة التحكم - بدون إعادة تحميل
 """
 
 import streamlit as st
@@ -8,7 +8,7 @@ import pandas as pd
 from frontend.utils.helpers import get_sample_data
 
 def render():
-    """عرض لوحة التحكم"""
+    """عرض لوحة التحكم - بدون إعادة تحميل"""
     st.subheader("📊 نظرة عامة على السوق")
     
     # بطاقات إحصائيات
@@ -60,14 +60,13 @@ def display_metrics():
         """, unsafe_allow_html=True)
 
 def display_scan_results():
-    """عرض نتائج المسح"""
+    """عرض نتائج المسح - بدون إعادة تحميل"""
     results = st.session_state.get('scan_results')
     
     if results is not None and not results.empty:
         df = results
         
         st.subheader("📋 نتائج المسح")
-        # تم التحديث: use_container_width=True → width='stretch'
         st.dataframe(
             df,
             column_config={
@@ -87,8 +86,7 @@ def display_scan_results():
         display_sample_preview()
 
 def display_sample_preview():
-    """عرض نموذج للنتائج"""
+    """عرض نموذج للنتائج - بدون إعادة تحميل"""
     with st.expander("📋 نموذج للنتائج المتوقعة"):
         sample_data = get_sample_data()
-        # تم التحديث: use_container_width=True → width='stretch'
         st.dataframe(sample_data, width='stretch', hide_index=True)
