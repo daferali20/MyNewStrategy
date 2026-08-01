@@ -1,6 +1,6 @@
 # frontend/pages/scanner.py
 """
-صفحة مسح السوق
+صفحة مسح السوق - تم إصلاح مشكلة إعادة التحميل
 """
 
 import streamlit as st
@@ -18,9 +18,11 @@ def render():
     
     st.markdown("---")
     
-    # زر التحديث
-    if st.button("🔄 تحديث النتائج", type="primary", key="refresh_scan", width="stretch"):
-        run_scan(config)
+    # زر التحديث - بدون إعادة تحميل تلقائي
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col1:
+        if st.button("🔄 تحديث النتائج", type="primary", key="refresh_scan", width="stretch"):
+            run_scan(config)
     
     # عرض النتائج
     if not st.session_state.get('scan_results', pd.DataFrame()).empty:
@@ -38,7 +40,7 @@ def display_current_settings(config):
         st.metric("🏢 القطاع", sector)
 
 def run_scan(config):
-    """تشغيل عملية المسح"""
+    """تشغيل عملية المسح - بدون إعادة تحميل الصفحة"""
     try:
         from backend.scanner.ai_breakout_analyzer import scan_market_ai
     except ImportError:
@@ -57,8 +59,7 @@ def run_scan(config):
             st.session_state.scan_results = results
             st.session_state.last_scan_time = datetime.now().strftime('%H:%M:%S')
             st.success(f"✅ تم العثور على {len(results)} فرصة!")
-            time.sleep(0.5)
-            st.rerun()
+            # إزالة st.rerun() لمنع إعادة تحميل الصفحة
         else:
             st.warning("⚠️ لا توجد نتائج مطابقة للمعايير الحالية")
 
@@ -85,8 +86,8 @@ def export_buttons(df):
             width="stretch"
         )
     with col2:
-        if st.button("📋 نسخ", width="stretch"):
+        if st.button("📋 نسخ", width="stretch", key="copy_results"):
             st.toast("✅ تم نسخ النتائج!")
     with col3:
-        if st.button("📧 مشاركة", width="stretch"):
+        if st.button("📧 مشاركة", width="stretch", key="share_results"):
             st.toast("📧 تم فتح مشاركة النتائج!")
