@@ -7,7 +7,93 @@ import pandas as pd
 from datetime import datetime
 import yfinance as yf
 import streamlit as st
+# frontend/utils/helpers.py
+# أضف هذه الدالة في نهاية الملف
 
+import streamlit as st
+import os
+from config import ROOT_DIR
+
+def load_css():
+    """تحميل ملف التصميم ثلاثي الأبعاد"""
+    css_path = os.path.join(ROOT_DIR, "frontend", "assets", "style.css")
+    if os.path.exists(css_path):
+        try:
+            with open(css_path, 'r', encoding='utf-8') as f:
+                st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+        except:
+            load_inline_css()
+    else:
+        load_inline_css()
+
+def load_inline_css():
+    """تصميم مضمن في حال عدم وجود الملف"""
+    st.markdown("""
+    <style>
+    .main-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 35px 40px;
+        border-radius: 20px;
+        color: white;
+        margin-bottom: 30px;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        transform: perspective(1000px) rotateX(2deg) rotateY(-2deg);
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .main-header:hover {
+        transform: perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1.02);
+        box-shadow: 0 30px 60px -12px rgba(0,0,0,0.6), 0 0 40px rgba(102,126,234,0.3);
+    }
+    [data-testid="stSidebar"] {
+        background: rgba(26, 26, 46, 0.92) !important;
+        backdrop-filter: blur(20px);
+        border-right: 1px solid rgba(255,255,255,0.05);
+        box-shadow: 10px 0 40px rgba(0,0,0,0.3);
+    }
+    .metric-card {
+        background: rgba(255,255,255,0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.1);
+        padding: 25px;
+        border-radius: 16px;
+        text-align: center;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: perspective(800px) rotateX(0deg) rotateY(0deg);
+        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.3);
+    }
+    .metric-card:hover {
+        transform: perspective(800px) rotateX(5deg) rotateY(5deg) translateY(-10px);
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        border-color: rgba(102,126,234,0.3);
+    }
+    .metric-card .icon { font-size: 2.5rem; margin-bottom: 10px; }
+    .metric-card .value { font-size: 2rem; font-weight: bold; color: white; }
+    .metric-card .label { color: #888; font-size: 0.9rem; margin-top: 5px; }
+    .stock-card {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        padding: 20px;
+        border-radius: 12px;
+        border-right: 4px solid #667eea;
+        margin: 10px 0;
+        transition: all 0.3s ease;
+    }
+    .stock-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 20px rgba(102,126,234,0.2);
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .status-badge.buy { background: rgba(0,230,118,0.2); color: #00E676; }
+    .status-badge.hold { background: rgba(255,193,7,0.2); color: #FFC107; }
+    .status-badge.sell { background: rgba(255,82,82,0.2); color: #FF5252; }
+    </style>
+    """, unsafe_allow_html=True)
+    
 @st.cache_data(ttl=300)
 def get_stock_data_cached(symbol, period="6mo"):
     """جلب بيانات السهم مع التخزين المؤقت"""
