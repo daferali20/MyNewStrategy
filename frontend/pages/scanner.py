@@ -6,7 +6,7 @@
 import streamlit as st
 import time
 from datetime import datetime
-from backend.scanner.ai_breakout_analyzer import scan_market_ai
+import pandas as pd
 
 def render():
     """عرض صفحة المسح"""
@@ -23,7 +23,7 @@ def render():
         run_scan(config)
     
     # عرض النتائج
-    if not st.session_state.get('scan_results', None) is None:
+    if not st.session_state.get('scan_results', pd.DataFrame()).empty:
         display_results()
 
 def display_current_settings(config):
@@ -39,6 +39,12 @@ def display_current_settings(config):
 
 def run_scan(config):
     """تشغيل عملية المسح"""
+    try:
+        from backend.scanner.ai_breakout_analyzer import scan_market_ai
+    except ImportError:
+        st.error("❌ وحدة المسح غير متوفرة")
+        return
+    
     with st.spinner("🔍 جاري مسح السوق..."):
         results = scan_market_ai(
             sector=config.get('sector'),
@@ -46,6 +52,7 @@ def run_scan(config):
             min_prob=config.get('min_prob', 55),
             max_symbols=config.get('max_symbols', 15)
         )
+        
         if not results.empty:
             st.session_state.scan_results = results
             st.session_state.last_scan_time = datetime.now().strftime('%H:%M:%S')
