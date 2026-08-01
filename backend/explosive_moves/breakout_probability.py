@@ -1,149 +1,162 @@
 # backend/explosive_moves/breakout_probability.py
 """
-حاسبة احتمالية الانفجار (Breakout Probability)
-تحسب احتمالية اختراق السعر للحدود العلوية
+حاسبة احتمالية الانفجار والاختراق (Breakout Probability Calculator)
+تقوم بحساب وتوقع احتمالية الاختراق السعري بناءً على العوامل الفنية، 
+حجم التداول، ونسبة الانضغاط.
 """
 
+from typing import Dict, Any, Optional
 import pandas as pd
 import numpy as np
-from typing import Dict, Tuple
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler
+
 
 class BreakoutProbability:
-    """
-    حساب احتمالية الانفجار باستخدام عوامل متعددة
-    """
-    
+    """حساب احتمالية الانفجار والاتجاه المتوقع باستخدام مؤشرات متعددة"""
+
     def __init__(self):
-        self.model = None
-        self.scaler = StandardScaler()
         self.features = [
             'squeeze_score', 'volatility_score', 'compression_score',
             'volume_ratio', 'rsi', 'price_position'
         ]
-    
-    def calculate(self, df: pd.DataFrame, indicators: Dict = None) -> Dict:
+
+    def calculate(self, df: pd.DataFrame, indicators: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        حساب احتمالية الانفجار
-        
+        حساب احتمالية الاختراق ومستوى الثقة
+
         Args:
-            df: DataFrame بالبيانات
-            indicators: قاموس بالمؤشرات المحسوبة مسبقاً
-        
+            df: DataFrame يحتوي على بيانات الأسعار (OHLCV)
+            indicators: قاموس اختياري يحتوي على مؤشرات محسوبة مسبقاً (مثل squeeze_score)
+
         Returns:
-            قاموس يحتوي على:
-            - probability: float (0-100)
-            - confidence: float (0-100)
-            - factors: Dict
+            Dict يحتوي على الاحتمالية، درجة الثقة، العوامل، والاتجاه المتوقع
         """
-        if df.empty or len(df) < 50:
-            return {'error': 'بيانات غير كافية'}
-        
+        if df is None or df.empty or len(df) < 20:
+            return {'error': 'بيانات غير كافية، يتطلب التحليل 20 شمعة على الأقل'}
+
         try:
-            close = df['Close']
-            high = df['High']
-            low = df['Low']
-            volume = df['Volume']
-            
-            # حساب المؤشرات
-            if indicators is None:
-                indicators = self._calculate_indicators(df)
-            
-            # عوامل الاحتمالية
-            factors = self._calculate_factors(df, indicators)
-            
-            # حساب الاحتمالية الكلية
+            # 1. حساب المؤشرات الفنية الأساسية
+            calculated_indicators = self._calculate_indicators(df)
+            if indicators:
+                calculated_indicators.update(indicators)
+
+            # 2. حساب عوامل الاحتمالية
+            factors = self._calculate_factors(df, calculated_indicators)
+
+            # 3. حساب الاحتمالية الكلية ومستوى الثقة
             probability = self._calculate_total_probability(factors)
-            confidence = self._calculate_confidence(indicators)
-            
+            confidence = self._calculate_confidence(calculated_indicators)
+
+            direction_val = factors.get('direction_score', 0)
+            breakout_dir = 'up' if direction_val > 0 else ('down' if direction_val < 0 else 'neutral')
+
             return {
-                'probability': round(probability, 2),
-                'confidence': round(confidence, 2),
+                'probability': round(float(probability), 2),
+                'confidence': round(float(confidence), 2),
                 'factors': factors,
-                'expected_move': round(factors.get('expected_move', 0), 2),
-                'breakout_direction': 'up' if factors.get('direction_score', 0) > 0 else 'down'
+                'expected_move': round(float(factors.get('expected_move', 0.0)), 2),
+                'breakout_direction': breakout_dir
             }
-            
+
         except Exception as e:
-            return {'error': str(e)}
-    
-    def _calculate_indicators(self, df: pd.DataFrame) -> Dict:
-        """حساب المؤشرات الأساسية"""
+            return {'error': f'حدث خطأ في حساب احتمالية الانفجار: {str(e)}'}
+
+    def _calculate_indicators(self, df: pd.DataFrame) -> Dict[str, Any]:
+        """حساب RSI وموقع السعر النسبي باحتياط أمان"""
+        close = df['Close']
+        high = df['High']
+
+        # 1. حساب RSI آمن (14 فترة)
+        delta = close.diff()
+        gain = (delta.where(delta > 0, 0.0)).rolling(14, min_periods=1).mean()
+        loss = (-delta.where(delta < 0, 0.0)).rolling(14, min_periods=1).mean()
+
+        rs = gain / loss.replace(0, np.nan)
+        rsi_series = 100 - (100 / (1 + rs))
+        rsi_val = rsi_series.iloc[-1]
+        
+        if pd.isna(rsi_val):
+            rsi_val = 50.0
+
+        # 2. موقع السعر بالنسبة لأعلى سعر (مرن بحسب البيانات المتاحة حتى 252 يوم)
+        lookback_period = min(len(df), 252)
+        high_period = float(high.iloc[-lookback_period:].max())
+        current_price = float(close.iloc[-1])
+
+        price_position = (current_price / high_period * 100.0) if high_period > 0 else 50.0
+
+        return {
+            'rsi': float(np.clip(rsi_val, 0.0, 100.0)),
+            'price_position': float(np.clip(price_position, 0.0, 100.0)),
+            'current_price': round(current_price, 2)
+        }
+
+    def _calculate_factors(self, df: pd.DataFrame, indicators: Dict[str, Any]) -> Dict[str, Any]:
+        """حساب وتحليل العوامل المباشرة للاختراق"""
         close = df['Close']
         high = df['High']
         low = df['Low']
-        volume = df['Volume']
-        
-        # RSI
-        delta = close.diff()
-        gain = delta.where(delta > 0, 0.0).rolling(14).mean()
-        loss = (-delta.where(delta < 0, 0.0)).rolling(14).mean()
-        loss = loss.replace(0, np.nan)
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
-        
-        # موقع السعر
-        high_52 = high.iloc[-252:].max()
-        price_position = (close.iloc[-1] / high_52) * 100 if high_52 > 0 else 50
-        
+        volume = df['Volume'] if 'Volume' in df.columns else pd.Series(1, index=df.index)
+
+        current_price = float(close.iloc[-1])
+
+        # 1. معدل حجم التداول (Volume Ratio)
+        vol_period = min(len(df) - 1, 20)
+        avg_volume = float(volume.iloc[-vol_period-1:-1].mean()) if vol_period > 0 else 1.0
+        current_volume = float(volume.iloc[-1])
+        volume_ratio = (current_volume / avg_volume) if avg_volume > 0 else 1.0
+
+        # 2. المسافة عن المقاومة القريبة
+        res_period = min(len(df), 20)
+        resistance = float(high.iloc[-res_period:].max())
+        resistance_distance = ((resistance - current_price) / current_price * 100.0) if current_price > 0 else 0.0
+
+        # 3. التحرك المتوقع (ATR %)
+        tr = np.maximum(high - low, np.maximum(abs(high - close.shift(1)), abs(low - close.shift(1))))
+        atr = float(tr.rolling(14, min_periods=1).mean().iloc[-1])
+        expected_move = (atr / current_price * 100.0) if current_price > 0 else 0.0
+
+        # 4. اتجاه الحركة (Direction Score)
+        trend_period = min(len(df), 10)
+        recent_avg = float(close.iloc[-trend_period:].mean())
+        price_trend = (current_price / recent_avg) if recent_avg > 0 else 1.0
+
+        if price_trend > 1.015:
+            direction_score = 1
+        elif price_trend < 0.985:
+            direction_score = -1
+        else:
+            direction_score = 0
+
         return {
-            'rsi': rsi.iloc[-1] if not rsi.isna().iloc[-1] else 50,
-            'price_position': price_position,
-            'current_price': close.iloc[-1]
-        }
-    
-    def _calculate_factors(self, df: pd.DataFrame, indicators: Dict) -> Dict:
-        """حساب عوامل الاحتمالية"""
-        close = df['Close']
-        volume = df['Volume']
-        
-        # حجم التداول
-        avg_volume = volume.iloc[-21:-1].mean()
-        volume_ratio = volume.iloc[-1] / avg_volume if avg_volume > 0 else 1
-        
-        # المقاومة
-        resistance = df['High'].iloc[-20:].max()
-        current_price = close.iloc[-1]
-        resistance_distance = (resistance - current_price) / current_price
-        
-        # التحرك المتوقع
-        atr = (df['High'] - df['Low']).rolling(14).mean().iloc[-1]
-        expected_move = (atr / current_price) * 100
-        
-        # اتجاه الاحتمالية
-        price_trend = close.iloc[-1] / close.iloc[-10:].mean()
-        direction_score = 1 if price_trend > 1.02 else -1 if price_trend < 0.98 else 0
-        
-        return {
-            'volume_ratio': round(volume_ratio, 2),
-            'resistance_distance': round(resistance_distance * 100, 2),
-            'expected_move': round(expected_move, 2),
+            'volume_ratio': round(float(volume_ratio), 2),
+            'resistance_distance': round(float(resistance_distance), 2),
+            'expected_move': round(float(expected_move), 2),
             'direction_score': direction_score,
-            'rsi_score': indicators.get('rsi', 50),
-            'price_position': indicators.get('price_position', 50)
+            'rsi_score': indicators.get('rsi', 50.0),
+            'price_position': indicators.get('price_position', 50.0),
+            'squeeze_score': indicators.get('squeeze_score', 0.0),
+            'compression_score': indicators.get('compression_score', 0.0)
         }
-    
-    def _calculate_total_probability(self, factors: Dict) -> float:
-        """حساب الاحتمالية الكلية"""
-        # وزن كل عامل
+
+    def _calculate_total_probability(self, factors: Dict[str, Any]) -> float:
+        """حساب الاحتمالية الإجمالية للاختراق بالدرجات المرجحة"""
         weights = {
             'volume_ratio': 0.25,
             'resistance_distance': 0.15,
             'expected_move': 0.20,
-            'direction_score': 0.20,
+            'direction_score': 0.15,
             'rsi_score': 0.10,
-            'price_position': 0.10
+            'price_position': 0.15
         }
-        
-        # تطبيع العوامل
-        volume_score = min(100, factors['volume_ratio'] * 40)
-        resistance_score = max(0, 100 - abs(factors['resistance_distance']) * 2)
-        move_score = min(100, factors['expected_move'] * 10)
-        direction_score = 50 + (factors['direction_score'] * 50)
-        rsi_score = self._normalize_rsi(factors['rsi_score'])
-        position_score = factors['price_position']
-        
+
+        # التطبيع والتقييم
+        volume_score = min(100.0, factors.get('volume_ratio', 1.0) * 40.0)
+        resistance_score = max(0.0, 100.0 - abs(factors.get('resistance_distance', 0.0)) * 5.0)
+        move_score = min(100.0, factors.get('expected_move', 0.0) * 15.0)
+        direction_score = 50.0 + (factors.get('direction_score', 0) * 40.0)
+        rsi_score = self._normalize_rsi(factors.get('rsi_score', 50.0))
+        position_score = factors.get('price_position', 50.0)
+
         # حساب المتوسط المرجح
         probability = (
             volume_score * weights['volume_ratio'] +
@@ -153,27 +166,30 @@ class BreakoutProbability:
             rsi_score * weights['rsi_score'] +
             position_score * weights['price_position']
         )
-        
-        return min(100, max(0, probability))
-    
+
+        # دمج تأثير الانضغاط إن وجد
+        squeeze_score = factors.get('squeeze_score', 0.0)
+        if squeeze_score > 0:
+            probability = (probability * 0.7) + (squeeze_score * 0.3)
+
+        return float(np.clip(probability, 0.0, 100.0))
+
     def _normalize_rsi(self, rsi: float) -> float:
-        """تطبيع قيمة RSI"""
-        if 40 <= rsi <= 60:
-            return 70
-        elif 30 <= rsi <= 70:
-            return 50
+        """تطبيع قيمة RSI لتحديد المناطق التجميعية والأكثر تفاؤلاً"""
+        if 45.0 <= rsi <= 65.0:
+            return 80.0
+        elif 35.0 <= rsi <= 75.0:
+            return 60.0
         else:
-            return max(0, 100 - abs(rsi - 50) * 1.5)
-    
-    def _calculate_confidence(self, indicators: Dict) -> float:
-        """حساب مستوى الثقة في الاحتمالية"""
-        # عوامل الثقة
-        rsi = indicators.get('rsi', 50)
-        price_position = indicators.get('price_position', 50)
-        
-        # الثقة أعلى عندما تكون المؤشرات في نطاقات مثالية
-        rsi_confidence = 100 - abs(rsi - 55) * 2
-        position_confidence = 100 - abs(price_position - 80) * 1.5
-        
-        confidence = (rsi_confidence + position_confidence) / 2
-        return min(100, max(0, confidence))
+            return max(0.0, 100.0 - abs(rsi - 50.0) * 2.0)
+
+    def _calculate_confidence(self, indicators: Dict[str, Any]) -> float:
+        """حساب درجة الثقة بالاعتماد على الاتساق بين المؤشرات"""
+        rsi = indicators.get('rsi', 50.0)
+        price_position = indicators.get('price_position', 50.0)
+
+        rsi_confidence = 100.0 - abs(rsi - 55.0) * 1.5
+        position_confidence = 100.0 - abs(price_position - 75.0) * 1.2
+
+        confidence = (rsi_confidence + position_confidence) / 2.0
+        return float(np.clip(confidence, 10.0, 100.0))
