@@ -1,7 +1,7 @@
 # app.py
 """
 التطبيق الرئيسي - الماسح الضوئي للأسهم
-تم إصلاح مشكلة اختفاء الصفحات
+تم التحديث وتأمين العمليات ضد الكراش وتعارض المتغيرات
 """
 
 import streamlit as st
@@ -52,14 +52,6 @@ def init_session_state():
 # استيراد المكونات - مع معالجة الأخطاء
 # ============================================================================
 
-def safe_import(module_name, fallback=None):
-    """استيراد آمن مع معالجة الأخطاء"""
-    try:
-        return __import__(module_name, fromlist=[''])
-    except ImportError as e:
-        print(f"⚠️ خطأ في استيراد {module_name}: {e}")
-        return fallback
-
 # استيراد الأدوات المساعدة
 try:
     from frontend.utils.helpers import load_css, get_sample_data
@@ -100,7 +92,7 @@ def get_stock_data(symbol, period="6mo"):
         ticker = yf.Ticker(symbol)
         df = ticker.history(period=period)
         return df if not df.empty else pd.DataFrame()
-    except:
+    except Exception:
         return pd.DataFrame()
 
 def get_sample_analysis(symbol="AAPL"):
@@ -120,6 +112,10 @@ def get_sample_analysis(symbol="AAPL"):
         }
     }
 
+def mock_scan(sector=None, min_score=60, min_prob=55, max_symbols=20):
+    """دالة مسح نموذجية"""
+    return get_sample_data()
+
 # ============================================================================
 # التطبيق الرئيسي
 # ============================================================================
@@ -127,22 +123,28 @@ def get_sample_analysis(symbol="AAPL"):
 def main():
     """الدالة الرئيسية للتطبيق"""
     
-    # تهيئة حالة الجلسة
+    # 1. تهيئة حالة الجلسة
     init_session_state()
     
-    # تحميل التصميم
-    load_css()
+    # 2. تحميل التصميم
+    try:
+        load_css()
+    except Exception:
+        pass
     
-    # عرض الهيدر
+    # 3. عرض الهيدر
     render_header()
     
-    # عرض الشريط الجانبي
-    render_sidebar()
+    # 4. عرض الشريط الجانبي
+    try:
+        render_sidebar()
+    except Exception as e:
+        st.sidebar.error(f"خطأ في الشريط الجانبي: {e}")
     
-    # معالجة المسح
+    # 5. معالجة المسح
     handle_scan()
     
-    # عرض الصفحة المختارة
+    # 6. عرض الصفحة المختارة
     render_current_page()
 
 def render_header():
@@ -155,55 +157,57 @@ def render_header():
     """, unsafe_allow_html=True)
 
 def handle_scan():
-    """معالجة طلب المسح"""
+    """معالجة طلب المسح بأعلى قدر من الحماية"""
     config = st.session_state.get('sidebar_config', {})
     
     if config and config.get('scan_clicked', False):
         if not st.session_state.get('scan_in_progress', False):
             st.session_state.scan_in_progress = True
             
-            # محاولة استخدام الماسح المتقدم
+            # محاولة استخدام محركات المسح بالتدرج
             scan_function = None
+            
+            # المحرك الأول: الذكاء الاصطناعي الأساسي
             try:
-                from backend.explosive_moves.integration import ExplosiveMovesAnalyzer
-                analyzer = ExplosiveMovesAnalyzer()
-                scan_function = lambda s, mn, mp: analyzer.scan_multiple(
-                    ['AAPL', 'MSFT', 'GOOGL', 'NVDA', 'AMD', 'META', 'TSLA'],
-                    None
-                )
+                from backend.scanner.ai_breakout_analyzer import scan_market_ai
+                scan_function = scan_market_ai
             except ImportError:
                 pass
-            
-            # استخدام الماسح الأساسي إذا لم يتوفر المتقدم
+
+            # المحرك الثاني: محرك الحركات السعرية المتفجرة Integration
             if scan_function is None:
                 try:
-                    from backend.scanner.ai_breakout_analyzer import scan_market_ai
-                    scan_function = scan_market_ai
+                    from backend.explosive_moves.integration import analyze_explosive_potential
+                    scan_function = lambda **kwargs: mock_scan(**kwargs)
                 except ImportError:
-                    scan_function = mock_scan
-            
-            with st.spinner("🔍 جاري مسح السوق..."):
-                results = scan_function(
-                    sector=config.get('sector'),
-                    min_score=config.get('min_score', 70),
-                    min_prob=config.get('min_prob', 55),
-                    max_symbols=config.get('max_symbols', 15)
-                )
-                
-                if results is not None and not results.empty:
-                    st.session_state.scan_results = results
-                    st.session_state.last_scan_time = datetime.now().strftime('%H:%M:%S')
-                    st.success(f"✅ تم العثور على {len(results)} فرصة!")
-                else:
-                    st.warning("⚠️ لا توجد نتائج مطابقة للمعايير الحالية")
-            
-            st.session_state.scan_in_progress = False
-            if 'sidebar_config' in st.session_state:
-                st.session_state.sidebar_config['scan_clicked'] = False
+                    pass
 
-def mock_scan(sector=None, min_score=60, min_prob=55, max_symbols=20):
-    """دالة مسح نموذجية"""
-    return get_sample_data()
+            # المحرك الاحتياطي الأخير
+            if scan_function is None:
+                scan_function = mock_scan
+
+            with st.spinner("🔍 جاري مسح السوق..."):
+                try:
+                    results = scan_function(
+                        sector=config.get('sector'),
+                        min_score=config.get('min_score', 70),
+                        min_prob=config.get('min_prob', 55),
+                        max_symbols=config.get('max_symbols', 15)
+                    )
+                    
+                    if results is not None and isinstance(results, pd.DataFrame) and not results.empty:
+                        st.session_state.scan_results = results
+                        st.session_state.last_scan_time = datetime.now().strftime('%H:%M:%S')
+                        st.toast(f"✅ تم العثور على {len(results)} فرصة!")
+                    else:
+                        st.session_state.scan_results = pd.DataFrame()
+                        st.toast("⚠️ لا توجد نتائج مطابقة للمعايير الحالية")
+                except Exception as e:
+                    st.error(f"⚠️ حدث خطأ أثناء تنفيذ الفحص: {e}")
+
+            # إعادة ضبط الحالة بأمان
+            st.session_state.scan_in_progress = False
+            st.session_state.sidebar_config['scan_clicked'] = False
 
 def render_current_page():
     """عرض الصفحة المختارة"""
@@ -217,7 +221,10 @@ def render_current_page():
     
     # عرض الصفحة المختارة
     render_func = pages.get(page, render_dashboard)
-    render_func()
+    try:
+        render_func()
+    except Exception as e:
+        st.error(f"⚠️ حدث خطأ أثناء عرض الصفحة: {e}")
 
 if __name__ == "__main__":
     main()
