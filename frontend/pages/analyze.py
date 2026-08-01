@@ -4,9 +4,9 @@
 """
 
 import streamlit as st
+import pandas as pd
 from frontend.utils.helpers import get_stock_data_cached, get_stock_info_cached
 from frontend.components.charts import create_candlestick_chart
-from frontend.components.cards import stock_card
 
 def render():
     """عرض صفحة تحليل السهم"""
@@ -23,7 +23,7 @@ def get_user_input():
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        if not st.session_state.get('scan_results', None) is None and not st.session_state.scan_results.empty:
+        if not st.session_state.get('scan_results', pd.DataFrame()).empty:
             symbols = st.session_state.scan_results['symbol'].tolist()
             selected = st.selectbox("اختر من النتائج:", ["-- اختر سهماً --"] + symbols, key="stock_select")
             if selected != "-- اختر سهماً --":
@@ -49,12 +49,7 @@ def display_analysis(symbol, period):
         
         # معلومات الشركة
         info = get_stock_info_cached(symbol)
-        stock_card(
-            symbol,
-            info.get('longName', symbol),
-            info.get('sector', 'غير معروف'),
-            {'🏭': info.get('industry', 'غير معروف')}
-        )
+        display_stock_info(symbol, info)
         
         # التحليل
         col1, col2 = st.columns([2, 1])
@@ -63,7 +58,20 @@ def display_analysis(symbol, period):
             display_chart(df, symbol)
         
         with col2:
-            display_metrics(df, symbol)
+            display_metrics(df)
+
+def display_stock_info(symbol, info):
+    """عرض معلومات الشركة"""
+    company_name = info.get('longName', symbol)
+    sector = info.get('sector', 'غير معروف')
+    industry = info.get('industry', 'غير معروف')
+    
+    st.markdown(f"""
+    <div class="stock-card">
+        <h3>{symbol} - {company_name}</h3>
+        <p>🏢 {sector} | 📊 {industry}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 def display_chart(df, symbol):
     """عرض الرسم البياني"""
@@ -81,7 +89,7 @@ def display_chart(df, symbol):
     fig = create_candlestick_chart(df, symbol, entry_points)
     st.plotly_chart(fig, use_container_width=True)
 
-def display_metrics(df, symbol):
+def display_metrics(df):
     """عرض المؤشرات والمستويات"""
     current = df['Close'].iloc[-1]
     high_20 = df['High'].iloc[-20:].max()
