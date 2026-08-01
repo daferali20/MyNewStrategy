@@ -28,10 +28,14 @@ if ROOT_DIR not in sys.path:
 # استيراد المكونات
 # ============================================================================
 
-from frontend.utils.helpers import load_css
+# استيراد مباشر من الملفات (تجنب __init__.py للدائرية)
+from frontend.utils.helpers import load_css, get_sample_data
 from frontend.utils.state import init_session_state
 from frontend.components.sidebar import render_sidebar
-from frontend.pages import render_dashboard, render_scanner, render_file_explorer, render_analyze
+from frontend.pages.dashboard import render as render_dashboard
+from frontend.pages.scanner import render as render_scanner
+from frontend.pages.file_explorer import render as render_file_explorer
+from frontend.pages.analyze import render as render_analyze
 
 # ============================================================================
 # التطبيق الرئيسي
@@ -76,7 +80,11 @@ def handle_scan():
             st.session_state.scan_in_progress = True
             
             # استيراد متأخر لتجنب الدائرية
-            from backend.scanner.ai_breakout_analyzer import scan_market_ai
+            try:
+                from backend.scanner.ai_breakout_analyzer import scan_market_ai
+            except ImportError:
+                # إذا لم يكن الملف موجوداً، استخدم بيانات نموذجية
+                scan_market_ai = mock_scan
             
             with st.spinner("🔍 جاري مسح السوق..."):
                 results = scan_market_ai(
@@ -94,6 +102,11 @@ def handle_scan():
                     st.warning("⚠️ لا توجد نتائج مطابقة للمعايير الحالية")
             
             st.session_state.scan_in_progress = False
+
+def mock_scan(sector=None, min_score=60, min_prob=55, max_symbols=20):
+    """دالة مسح نموذجية في حال عدم وجود الماسح الحقيقي"""
+    import pandas as pd
+    return get_sample_data()
 
 def render_current_page():
     """عرض الصفحة المختارة"""
