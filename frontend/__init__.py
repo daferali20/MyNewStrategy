@@ -1,19 +1,15 @@
 # frontend/__init__.py
 """
-وحدة الواجهة الأمامية للتطبيق
+وحدة الواجهة الأمامية - تبسيط الاستيرادات لتجنب الدائرية
 """
 
-from .components.sidebar import render_sidebar
-from .components.dashboard import render_dashboard
-from .components.file_explorer import render_file_explorer
-from .components.charts import create_candlestick_chart
-from .utils.helpers import init_session_state, format_currency
+# استيرادات بسيطة فقط
+from .utils.helpers import load_css, format_currency, format_percentage
+from .utils.state import init_session_state
 
 __all__ = [
-    'render_sidebar',
-    'render_dashboard',
-    'render_file_explorer',
-    'create_candlestick_chart',
-    'init_session_state',
-    'format_currency'
+    'load_css',
+    'format_currency',
+    'format_percentage',
+    'init_session_state'
 ]
