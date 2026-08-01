@@ -4,8 +4,15 @@
 """
 
 import pandas as pd
-from config import STOCK_SYMBOLS
 from frontend.utils.helpers import get_stock_data_cached, get_stock_info_cached
+
+# قائمة الأسهم الأمريكية
+STOCK_SYMBOLS = [
+    'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'AMD',
+    'INTC', 'NFLX', 'PYPL', 'ADBE', 'CRM', 'ORCL', 'IBM', 'CSCO',
+    'QCOM', 'TXN', 'AVGO', 'INTU', 'AMAT', 'LRCX', 'MU', 'NOW',
+    'PANW', 'SNPS', 'CDNS', 'MCHP', 'ADI', 'NXPI'
+]
 
 def scan_market_ai(sector=None, min_score=60, min_prob=55, max_symbols=20):
     """
@@ -31,7 +38,8 @@ def scan_market_ai(sector=None, min_score=60, min_prob=55, max_symbols=20):
                 
                 results.append(analysis)
                 
-        except Exception:
+        except Exception as e:
+            print(f"⚠️ خطأ في تحليل {symbol}: {e}")
             continue
     
     return pd.DataFrame(results)
@@ -84,3 +92,44 @@ def analyze_stock(df, symbol):
         'target_2': round(current_price + (atr * 3.5), 2),
         'volume_ratio': round(volume_ratio, 2)
     }
+
+# ============================================================================
+# دالة بديلة للاستخدام المباشر
+# ============================================================================
+
+def get_breakout_candidates(symbols=None, min_score=65):
+    """
+    الحصول على مرشحي الانفجار - متوافق مع الواجهة السابقة
+    
+    Args:
+        symbols: قائمة الرموز (اختياري)
+        min_score: الحد الأدنى للدرجة
+    
+    Returns:
+        DataFrame بالمرشحين
+    """
+    if symbols is None:
+        symbols = STOCK_SYMBOLS[:20]
+    
+    results = []
+    
+    for symbol in symbols:
+        try:
+            df = get_stock_data_cached(symbol, period="6mo")
+            if df.empty or len(df) < 50:
+                continue
+            
+            analysis = analyze_stock(df, symbol)
+            
+            if analysis and analysis['squeeze_score'] >= min_score:
+                results.append(analysis)
+                
+        except Exception:
+            continue
+    
+    if results:
+        df_result = pd.DataFrame(results)
+        df_result = df_result.sort_values('squeeze_score', ascending=False)
+        return df_result
+    
+    return pd.DataFrame()
