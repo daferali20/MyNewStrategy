@@ -5,7 +5,6 @@
 
 import streamlit as st
 from datetime import datetime
-from config import SECTORS, DEFAULT_SETTINGS
 
 def render_sidebar():
     """عرض الشريط الجانبي"""
@@ -15,20 +14,7 @@ def render_sidebar():
         st.markdown("---")
         
         # القائمة الرئيسية
-        pages = {
-            "📊 لوحة التحكم": "dashboard",
-            "🔍 مسح السوق": "scanner",
-            "📂 مستكشف الملفات": "files",
-            "📈 تحليل سهم": "analyze"
-        }
-        
-        selected = st.radio(
-            "القائمة", 
-            list(pages.keys()), 
-            index=0,
-            key="main_menu_radio"
-        )
-        st.session_state.current_page = pages[selected]
+        render_main_menu()
         
         st.markdown("---")
         
@@ -42,27 +28,45 @@ def render_sidebar():
         
         return st.session_state.get('sidebar_config', {})
 
+def render_main_menu():
+    """عرض القائمة الرئيسية"""
+    pages = {
+        "📊 لوحة التحكم": "dashboard",
+        "🔍 مسح السوق": "scanner",
+        "📂 مستكشف الملفات": "files",
+        "📈 تحليل سهم": "analyze"
+    }
+    
+    selected = st.radio(
+        "القائمة", 
+        list(pages.keys()), 
+        index=0,
+        key="main_menu_radio"
+    )
+    st.session_state.current_page = pages[selected]
+
 def render_scan_settings():
     """عرض إعدادات المسح"""
     st.subheader("⚙️ إعدادات المسح")
     
     min_score = st.slider(
         "🎯 درجة الجاهزية", 
-        50, 95, DEFAULT_SETTINGS['min_score'],
+        50, 95, 70,
         key="min_score_slider"
     )
     
     min_prob = st.slider(
         "📊 احتمالية الانفجار", 
-        30, 90, DEFAULT_SETTINGS['min_prob'],
+        30, 90, 55,
         key="min_prob_slider"
     )
     
-    sector = st.selectbox("🏢 القطاع", SECTORS, key="sector_select")
+    sectors = ["الكل", "التكنولوجيا", "المالية", "الرعاية الصحية", "الاستهلاك", "الطاقة"]
+    sector = st.selectbox("🏢 القطاع", sectors, key="sector_select")
     
     max_symbols = st.slider(
         "📈 عدد الأسهم للمسح",
-        5, 30, DEFAULT_SETTINGS['max_symbols'],
+        5, 30, 15,
         key="max_symbols"
     )
     
@@ -86,4 +90,3 @@ def render_system_info():
     if st.session_state.get('last_scan_time'):
         st.caption(f"⏱️ آخر مسح: {st.session_state.last_scan_time}")
     st.caption(f"🕐 {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    st.caption("💡 اختر صفحة من القائمة")
