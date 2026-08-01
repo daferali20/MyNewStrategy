@@ -1,9 +1,10 @@
 # frontend/utils/__init__.py
 """
-أدوات مساعدة للواجهة الأمامية
+حزمة الأدوات المساعدة للواجهة الأمامية (Frontend Utilities)
+تتيح الاستيراد المباشر لدوال التنسيق، الجلب المؤقت، وإدارة حالة الجلسة
 """
 
-from .helpers import (
+from frontend.utils.helpers import (
     load_css,
     load_inline_css,
     format_currency,
@@ -21,9 +22,17 @@ from .helpers import (
     get_file_content
 )
 
-from .state import init_session_state, get_state, set_state
+from frontend.utils.state import (
+    init_session_state,
+    get_state,
+    set_state,
+    update_state,
+    reset_state,
+    clear_state
+)
 
 __all__ = [
+    # دوال Design & Helpers
     'load_css',
     'load_inline_css',
     'format_currency',
@@ -39,7 +48,12 @@ __all__ = [
     'get_stock_data',
     'get_stock_info',
     'get_file_content',
+    
+    # دوال State Management
     'init_session_state',
     'get_state',
-    'set_state'
+    'set_state',
+    'update_state',
+    'reset_state',
+    'clear_state'
 ]
