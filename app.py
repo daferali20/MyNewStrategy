@@ -25,17 +25,42 @@ if ROOT_DIR not in sys.path:
     sys.path.append(ROOT_DIR)
 
 # ============================================================================
-# استيراد المكونات
+# استيراد المكونات مع معالجة الأخطاء
 # ============================================================================
 
-# استيراد مباشر من الملفات (تجنب __init__.py للدائرية)
+def safe_import(module_name, fallback=None):
+    """استيراد آمن مع معالجة الأخطاء"""
+    try:
+        return __import__(module_name, fromlist=[''])
+    except ImportError as e:
+        print(f"⚠️ خطأ في استيراد {module_name}: {e}")
+        return fallback
+
+# استيراد أساسي
 from frontend.utils.helpers import load_css, get_sample_data
 from frontend.utils.state import init_session_state
 from frontend.components.sidebar import render_sidebar
-from frontend.pages.dashboard import render as render_dashboard
-from frontend.pages.scanner import render as render_scanner
-from frontend.pages.file_explorer import render as render_file_explorer
-from frontend.pages.analyze import render as render_analyze
+
+# استيراد الصفحات مع معالجة الأخطاء
+try:
+    from frontend.pages.dashboard import render as render_dashboard
+except ImportError:
+    render_dashboard = lambda: st.warning("⚠️ صفحة لوحة التحكم غير متوفرة")
+
+try:
+    from frontend.pages.scanner import render as render_scanner
+except ImportError:
+    render_scanner = lambda: st.warning("⚠️ صفحة المسح غير متوفرة")
+
+try:
+    from frontend.pages.file_explorer import render as render_file_explorer
+except ImportError:
+    render_file_explorer = lambda: st.warning("⚠️ صفحة مستكشف الملفات غير متوفرة")
+
+try:
+    from frontend.pages.analyze import render as render_analyze
+except ImportError:
+    render_analyze = lambda: st.warning("⚠️ صفحة التحليل غير متوفرة")
 
 # ============================================================================
 # التطبيق الرئيسي
@@ -79,11 +104,9 @@ def handle_scan():
         if not st.session_state.get('scan_in_progress', False):
             st.session_state.scan_in_progress = True
             
-            # استيراد متأخر لتجنب الدائرية
             try:
                 from backend.scanner.ai_breakout_analyzer import scan_market_ai
             except ImportError:
-                # إذا لم يكن الملف موجوداً، استخدم بيانات نموذجية
                 scan_market_ai = mock_scan
             
             with st.spinner("🔍 جاري مسح السوق..."):
@@ -105,7 +128,6 @@ def handle_scan():
 
 def mock_scan(sector=None, min_score=60, min_prob=55, max_symbols=20):
     """دالة مسح نموذجية في حال عدم وجود الماسح الحقيقي"""
-    import pandas as pd
     return get_sample_data()
 
 def render_current_page():
