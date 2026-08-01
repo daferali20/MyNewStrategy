@@ -3,14 +3,19 @@
 مكونات الواجهة القابلة لإعادة الاستخدام
 """
 
+# استيرادات بسيطة فقط
 from .sidebar import render_sidebar
-from .dashboard import render_dashboard
-from .file_explorer import render_file_explorer
-from .charts import create_candlestick_chart
+from .charts import create_candlestick_chart, create_score_gauge
+from .cards import metric_card, stock_card, status_badge
+
+# لا نستورد dashboard هنا لتجنب الدائرية
+# سيتم استيراده عند الحاجة في app.py
 
 __all__ = [
     'render_sidebar',
-    'render_dashboard',
-    'render_file_explorer',
-    'create_candlestick_chart'
+    'create_candlestick_chart',
+    'create_score_gauge',
+    'metric_card',
+    'stock_card',
+    'status_badge'
 ]
