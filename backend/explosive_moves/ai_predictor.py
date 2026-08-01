@@ -1,23 +1,23 @@
 # backend/explosive_moves/ai_predictor.py
 """
-متنبئ الذكاء الاصطناعي (AI Predictor)
-يستخدم نماذج التعلم الآلي للتنبؤ بالحركات المتفجرة
+متنبئ الذكاء الاصطناعي (AI Predictor Module)
+يستخدم نماذج التعلم الآلي (Random Forest) لتوقع الانفجارات السعرية الوشيكة
+بناءً على تجميع مؤشرات الضغط والسيولة والتذبذب.
 """
 
-import pandas as pd
-import numpy as np
-from typing import Dict, List, Tuple, Optional
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
+from typing import Dict, List, Tuple, Optional, Any
 import warnings
+import numpy as np
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+
 warnings.filterwarnings('ignore')
 
+
 class AIPredictor:
-    """
-    التنبؤ بالحركات المتفجرة باستخدام الذكاء الاصطناعي
-    """
-    
+    """التنبؤ بالحركات المتفجرة باستخدام الذكاء الاصطناعي"""
+
     def __init__(self):
         self.model = None
         self.scaler = StandardScaler()
@@ -27,182 +27,185 @@ class AIPredictor:
             'call_put_ratio', 'bb_width', 'atr_ratio'
         ]
         self._init_model()
-    
+
     def _init_model(self):
-        """تهيئة نموذج الذكاء الاصطناعي"""
+        """تهيئة وتدريب نموذج الذكاء الاصطناعي مبدئياً"""
         try:
             self.model = RandomForestClassifier(
                 n_estimators=100,
-                max_depth=10,
-                min_samples_split=5,
+                max_depth=8,
+                min_samples_split=4,
                 random_state=42,
                 class_weight='balanced'
             )
-            # تدريب مبدئي على بيانات محاكاة
+            # تدريب مبدئي على بيانات محاكاة تتوافق مع النطاقات الواقعية
             self._train_synthetic()
         except Exception as e:
-            print(f"⚠️ خطأ في تهيئة النموذج: {e}")
+            print(f"⚠️ خطأ في تهيئة نموذج الذكاء الاصطناعي: {e}")
             self.model = None
-    
+
     def _train_synthetic(self):
-        """تدريب النموذج على بيانات محاكاة"""
+        """تدريب النموذج على بيانات محاكاة منطقية تطابق المقاييس الواقعية"""
         np.random.seed(42)
-        n_samples = 500
-        
-        X = np.random.randn(n_samples, len(self.features))
+        n_samples = 600
+
+        # توليد قيم مطابقة واقعياً للميزات
+        squeeze_score = np.random.uniform(0, 100, n_samples)
+        volatility_score = np.random.uniform(0, 100, n_samples)
+        compression_score = np.random.uniform(0, 100, n_samples)
+        volume_ratio = np.random.uniform(0.5, 4.0, n_samples)
+        rsi = np.random.uniform(20, 80, n_samples)
+        price_position = np.random.uniform(0, 100, n_samples)
+        smart_money_score = np.random.uniform(0, 100, n_samples)
+        call_put_ratio = np.random.uniform(0.5, 3.0, n_samples)
+        bb_width = np.random.uniform(0.01, 0.2, n_samples)
+        atr_ratio = np.random.uniform(0.01, 0.08, n_samples)
+
+        X = np.column_stack([
+            squeeze_score, volatility_score, compression_score,
+            volume_ratio, rsi, price_position, smart_money_score,
+            call_put_ratio, bb_width, atr_ratio
+        ])
+
         y = np.zeros(n_samples)
-        
         for i in range(n_samples):
-            # احتمال الانفجار يزيد مع ارتفاع المؤشرات
-            squeeze = X[i, 0] > 0.5
-            volatility = X[i, 1] > 0.5
-            volume = X[i, 3] > 0.6
-            rsi = 0.3 < X[i, 4] < 0.7
-            
-            if squeeze and volatility and volume and rsi:
+            # يرتفع احتمال الانفجار عند تلاقٍ مرتفع في النطاق والضغط والسيولة
+            is_high_squeeze = X[i, 0] > 65
+            is_compressed = X[i, 2] > 60
+            is_high_volume = X[i, 3] > 1.5
+            is_smart_flow = X[i, 6] > 60
+
+            if is_high_squeeze and is_compressed and (is_high_volume or is_smart_flow):
                 y[i] = 1
-            elif np.random.random() > 0.9:
+            elif np.random.random() < 0.08:  # ضوضاء عشوائية بسيطة للتوازن
                 y[i] = 1
-        
-        self.model.fit(X, y)
-        self.scaler.fit(X)
-    
-    def predict(self, indicators: Dict) -> Dict:
+
+        X_scaled = self.scaler.fit_transform(X)
+        self.model.fit(X_scaled, y)
+
+    def predict(self, indicators: Dict[str, Any]) -> Dict[str, Any]:
         """
-        التنبؤ بالحركة المتفجرة
-        
+        التنبؤ بالحركة المتفجرة عبر نموذج الذكاء الاصطناعي
+
         Args:
-            indicators: قاموس بالمؤشرات المحسوبة
-        
+            indicators: قاموس المؤشرات المحسوبة
+
         Returns:
-            قاموس يحتوي على:
-            - prediction: str (explosive/normal)
-            - probability: float (0-100)
-            - confidence: float (0-100)
-            - expected_move_percent: float
-            - time_horizon: str
+            Dict يحتوي على نتيجة التنبؤ، الاحتمالية، الثقة والأفق الزمني
         """
         if self.model is None:
             return self._fallback_prediction(indicators)
-        
+
         try:
-            # استخراج الميزات
             features = self._extract_features(indicators)
-            
+
             if features is None:
                 return self._fallback_prediction(indicators)
-            
-            # تطبيع الميزات
+
+            # تطبيع البيانات
             features_scaled = self.scaler.transform(features.reshape(1, -1))
-            
-            # التنبؤ
+
+            # حساب الاحتمالية
             prob = self.model.predict_proba(features_scaled)[0]
-            probability = prob[1] * 100
-            
-            # مستوى الثقة
-            confidence = self._calculate_confidence(indicators)
-            
-            # التحرك المتوقع
-            expected_move = self._calculate_expected_move(indicators)
-            
-            # الأفق الزمني
+            probability = float(prob[1] * 100.0)
+
+            # حساب الثقة والتحرك المتوقع
+            confidence = float(self._calculate_confidence(indicators))
+            expected_move = float(self._calculate_expected_move(indicators))
             time_horizon = self._estimate_time_horizon(indicators)
-            
+
             return {
-                'prediction': 'explosive' if probability > 60 else 'normal',
+                'prediction': 'explosive' if probability > 60.0 else 'normal',
                 'probability': round(probability, 2),
                 'confidence': round(confidence, 2),
                 'expected_move_percent': round(expected_move, 2),
                 'time_horizon': time_horizon,
                 'signal_strength': self._get_signal_strength(probability, confidence)
             }
-            
-        except Exception as e:
+
+        except Exception:
             return self._fallback_prediction(indicators)
-    
-    def _extract_features(self, indicators: Dict) -> Optional[np.ndarray]:
-        """استخراج الميزات من المؤشرات"""
+
+    def _extract_features(self, indicators: Dict[str, Any]) -> Optional[np.ndarray]:
+        """استخراج الميزات وضمان تسلسلها الصحيح"""
         try:
             features = [
-                indicators.get('squeeze_score', 50),
-                indicators.get('volatility_score', 50),
-                indicators.get('compression_score', 50),
-                indicators.get('volume_ratio', 1),
-                indicators.get('rsi', 50),
-                indicators.get('price_position', 50),
-                indicators.get('smart_money_score', 50),
-                indicators.get('call_put_ratio', 1),
-                indicators.get('bb_width', 0.1),
-                indicators.get('atr_ratio', 0.02)
+                float(indicators.get('squeeze_score', 50.0)),
+                float(indicators.get('volatility_score', 50.0)),
+                float(indicators.get('compression_score', 50.0)),
+                float(indicators.get('volume_ratio', 1.0)),
+                float(indicators.get('rsi', 50.0)),
+                float(indicators.get('price_position', 50.0)),
+                float(indicators.get('smart_money_score', 50.0)),
+                float(indicators.get('call_put_ratio', 1.0)),
+                float(indicators.get('bb_width', 0.05)),
+                float(indicators.get('atr_ratio', 0.02))
             ]
             return np.array(features)
-        except:
+        except Exception:
             return None
-    
-    def _calculate_confidence(self, indicators: Dict) -> float:
-        """حساب مستوى الثقة"""
-        # عوامل الثقة
-        factors = [
-            indicators.get('squeeze_score', 0),
-            indicators.get('volume_ratio', 0) * 50,
-            indicators.get('smart_money_score', 0)
-        ]
-        
-        confidence = sum(factors) / len(factors)
-        return min(100, max(0, confidence))
-    
-    def _calculate_expected_move(self, indicators: Dict) -> float:
-        """حساب التحرك المتوقع"""
-        # تقدير بناءً على ATR والمؤشرات
-        atr_ratio = indicators.get('atr_ratio', 0.02)
-        squeeze_score = indicators.get('squeeze_score', 50)
-        
-        base_move = atr_ratio * 100
-        multiplier = 1 + (squeeze_score / 100)
-        
-        return base_move * multiplier
-    
-    def _estimate_time_horizon(self, indicators: Dict) -> str:
-        """تقدير الأفق الزمني للانفجار"""
-        squeeze_score = indicators.get('squeeze_score', 50)
-        compression_days = indicators.get('compression_days', 0)
-        
-        if squeeze_score > 80 and compression_days > 5:
-            return "فوري (خلال ساعات)"
-        elif squeeze_score > 70 or compression_days > 10:
-            return "قصير المدى (خلال أيام)"
-        elif squeeze_score > 50:
+
+    def _calculate_confidence(self, indicators: Dict[str, Any]) -> float:
+        """حساب درجة الثقة بناءً على اتساق المؤشرات"""
+        squeeze = float(indicators.get('squeeze_score', 0.0))
+        volume_norm = float(indicators.get('volume_ratio', 1.0)) * 25.0
+        smart_money = float(indicators.get('smart_money_score', 0.0))
+        compression = float(indicators.get('compression_score', 0.0))
+
+        confidence = (squeeze * 0.35) + (min(100.0, volume_norm) * 0.25) + (smart_money * 0.2) + (compression * 0.2)
+        return float(np.clip(confidence, 10.0, 100.0))
+
+    def _calculate_expected_move(self, indicators: Dict[str, Any]) -> float:
+        """تقدير نسبة التغير المئوي المتوقعة"""
+        atr_ratio = float(indicators.get('atr_ratio', 0.02))
+        squeeze_score = float(indicators.get('squeeze_score', 50.0))
+
+        base_move = atr_ratio * 100.0
+        multiplier = 1.0 + (squeeze_score / 50.0)
+
+        return float(base_move * multiplier)
+
+    def _estimate_time_horizon(self, indicators: Dict[str, Any]) -> str:
+        """تقدير الفترة الزمنية لتحقق الانفجار"""
+        squeeze_score = float(indicators.get('squeeze_score', 50.0))
+        compression_days = int(indicators.get('compression_days', 0))
+
+        if squeeze_score > 80 and compression_days >= 5:
+            return "فوري (خلال ساعات / 1-2 يوم)"
+        elif squeeze_score > 65 or compression_days > 7:
+            return "قصير المدى (خلال 3-5 أيام)"
+        elif squeeze_score > 45:
             return "متوسط المدى (خلال أسبوع)"
         else:
-            return "طويل المدى (أسبوع+)"
-    
+            return "طويل المدى (أسبوعين+)"
+
     def _get_signal_strength(self, probability: float, confidence: float) -> str:
-        """تحديد قوة الإشارة"""
-        avg = (probability + confidence) / 2
-        
-        if avg > 80:
+        """تحديد القوة الإجمالية للإشارة"""
+        avg_score = (probability * 0.6) + (confidence * 0.4)
+
+        if avg_score >= 75.0:
             return "قوي جداً 🔥"
-        elif avg > 65:
+        elif avg_score >= 60.0:
             return "قوي 💪"
-        elif avg > 50:
+        elif avg_score >= 45.0:
             return "متوسط 📊"
         else:
             return "ضعيف ⚠️"
-    
-    def _fallback_prediction(self, indicators: Dict) -> Dict:
-        """تنبؤ احتياطي في حالة فشل النموذج"""
-        # تقدير بسيط باستخدام المؤشرات
-        squeeze = indicators.get('squeeze_score', 0)
-        volume = indicators.get('volume_ratio', 1)
-        
-        probability = min(100, (squeeze * 0.6 + volume * 20))
-        confidence = min(100, (squeeze * 0.4 + 30))
-        
+
+    def _fallback_prediction(self, indicators: Dict[str, Any]) -> Dict[str, Any]:
+        """طريقة التنبؤ الاحتياطية في حال تعذر تشغيل النموذج"""
+        squeeze = float(indicators.get('squeeze_score', 0.0))
+        volume = float(indicators.get('volume_ratio', 1.0))
+        compression = float(indicators.get('compression_score', 0.0))
+
+        probability = float(np.clip((squeeze * 0.5) + (compression * 0.3) + (volume * 15.0), 0.0, 100.0))
+        confidence = float(np.clip((squeeze * 0.4) + 30.0, 10.0, 100.0))
+
         return {
-            'prediction': 'explosive' if probability > 60 else 'normal',
+            'prediction': 'explosive' if probability > 60.0 else 'normal',
             'probability': round(probability, 2),
             'confidence': round(confidence, 2),
-            'expected_move_percent': round(indicators.get('atr_ratio', 0.02) * 100 * 2, 2),
+            'expected_move_percent': round(float(indicators.get('atr_ratio', 0.02) * 200.0), 2),
             'time_horizon': self._estimate_time_horizon(indicators),
-            'signal_strength': 'متوسط 📊' if probability > 50 else 'ضعيف ⚠️'
+            'signal_strength': self._get_signal_strength(probability, confidence)
         }
