@@ -1,15 +1,14 @@
 # frontend/pages/scanner.py
 """
-صفحة مسح السوق - تم إصلاح use_container_width
+صفحة مسح السوق - بدون إعادة تحميل
 """
 
 import streamlit as st
-import time
 from datetime import datetime
 import pandas as pd
 
 def render():
-    """عرض صفحة المسح"""
+    """عرض صفحة المسح - بدون إعادة تحميل"""
     st.subheader("🔍 مسح السوق الآلي")
     
     # عرض الإعدادات الحالية
@@ -21,7 +20,7 @@ def render():
     
     st.markdown("---")
     
-    # زر التحديث
+    # زر التحديث - بدون إعادة تحميل
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
         if st.button("🔄 تحديث النتائج", type="primary", key="refresh_scan", width="stretch"):
@@ -44,7 +43,7 @@ def display_current_settings(config):
         st.metric("🏢 القطاع", sector)
 
 def run_scan(config):
-    """تشغيل عملية المسح"""
+    """تشغيل عملية المسح - بدون إعادة تحميل"""
     try:
         from backend.scanner.ai_breakout_analyzer import scan_market_ai
     except ImportError:
@@ -67,16 +66,15 @@ def run_scan(config):
             st.warning("⚠️ لا توجد نتائج مطابقة للمعايير الحالية")
 
 def display_results(df):
-    """عرض النتائج"""
+    """عرض النتائج - بدون إعادة تحميل"""
     st.subheader(f"📊 النتائج ({len(df)})")
-    # تم التحديث: use_container_width=True → width='stretch'
     st.dataframe(df, width='stretch', hide_index=True)
     
     # أزرار التصدير
     export_buttons(df)
 
 def export_buttons(df):
-    """أزرار التصدير"""
+    """أزرار التصدير - بدون إعادة تحميل"""
     col1, col2, col3 = st.columns(3)
     with col1:
         csv = df.to_csv(index=False)
