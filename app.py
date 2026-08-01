@@ -10,6 +10,10 @@ import os
 from datetime import datetime
 import pandas as pd
 
+
+# أضف هذا الجزء في البداية لتفادي فشل طلبات الجلسة والمستخدم
+if 'user_details' not in st.session_state:
+    st.session_state.user_details = {"authenticated": True, "name": "Guest"}
 # ============================================================================
 # إعدادات الصفحة
 # ============================================================================
