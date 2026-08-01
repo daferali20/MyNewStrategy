@@ -1,12 +1,12 @@
 # app.py
 """
 التطبيق الرئيسي - الماسح الضوئي للأسهم
-نسخة خفيفة مع تقسيم الكود إلى ملفات متعددة
 """
 
 import streamlit as st
 import sys
 import os
+from datetime import datetime
 
 # ============================================================================
 # إعدادات الصفحة
@@ -28,11 +28,10 @@ if ROOT_DIR not in sys.path:
 # استيراد المكونات
 # ============================================================================
 
-from config import ROOT_DIR
+from frontend.utils.helpers import load_css
 from frontend.utils.state import init_session_state
 from frontend.components.sidebar import render_sidebar
-from frontend.pages import dashboard, scanner, file_explorer, analyze
-from frontend.utils.helpers import load_css
+from frontend.pages import render_dashboard, render_scanner, render_file_explorer, render_analyze
 
 # ============================================================================
 # التطبيق الرئيسي
@@ -53,11 +52,11 @@ def main():
     # عرض الشريط الجانبي
     render_sidebar()
     
-    # تشغيل المسح إذا تم الضغط على الزر
+    # معالجة المسح
     handle_scan()
     
     # عرض الصفحة المختارة
-    render_page()
+    render_current_page()
 
 def render_header():
     """عرض الهيدر الرئيسي"""
@@ -71,12 +70,13 @@ def render_header():
 def handle_scan():
     """معالجة طلب المسح"""
     config = st.session_state.get('sidebar_config')
+    
     if config and config.get('scan_clicked', False):
         if not st.session_state.get('scan_in_progress', False):
             st.session_state.scan_in_progress = True
+            
+            # استيراد متأخر لتجنب الدائرية
             from backend.scanner.ai_breakout_analyzer import scan_market_ai
-            import time
-            from datetime import datetime
             
             with st.spinner("🔍 جاري مسح السوق..."):
                 results = scan_market_ai(
@@ -85,26 +85,28 @@ def handle_scan():
                     min_prob=config.get('min_prob', 55),
                     max_symbols=config.get('max_symbols', 15)
                 )
+                
                 if not results.empty:
                     st.session_state.scan_results = results
                     st.session_state.last_scan_time = datetime.now().strftime('%H:%M:%S')
                     st.success(f"✅ تم العثور على {len(results)} فرصة!")
                 else:
                     st.warning("⚠️ لا توجد نتائج مطابقة للمعايير الحالية")
+            
             st.session_state.scan_in_progress = False
 
-def render_page():
+def render_current_page():
     """عرض الصفحة المختارة"""
     page = st.session_state.get('current_page', 'dashboard')
     
     pages = {
-        'dashboard': dashboard.render,
-        'scanner': scanner.render,
-        'files': file_explorer.render,
-        'analyze': analyze.render
+        'dashboard': render_dashboard,
+        'scanner': render_scanner,
+        'files': render_file_explorer,
+        'analyze': render_analyze
     }
     
-    pages.get(page, dashboard.render)()
+    pages.get(page, render_dashboard)()
 
 if __name__ == "__main__":
     main()
