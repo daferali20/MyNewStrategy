@@ -1,78 +1,113 @@
 # frontend/components/file_explorer.py
 """
-مكون مستكشف الملفات
+مكون مستكشف الملفات (File Explorer)
+مُصلح ومحدث ليشمل حزمة explosive_moves ويمنع تكرار مفاتيح Streamlit
 """
 
 import streamlit as st
-from frontend.utils.helpers import get_file_content
+import os
+
+try:
+    from frontend.utils.helpers import get_file_content
+except ImportError:
+    def get_file_content(path):
+        return f"# تعذر قراءة الملف: {path}"
+
+def render():
+    """الدالة الرئيسية لعرض المستكشف"""
+    render_file_explorer()
 
 def render_file_explorer():
     """عرض مستكشف الملفات"""
-    st.subheader("📂 مستكشف الملفات")
+    st.subheader("📂 مستكشف هياكل ملفات النظام")
     
-    # هيكل الملفات
-    files = {
+    # هيكل المشروع كاملاً بعد التحديثات
+    files_tree = {
         "📁 Backend": {
-            "scanner": ["__init__.py", "breakout_scanner.py", "screener.py", "ai_breakout_analyzer.py"],
-            "data_providers": ["market_data.py"],
-            "analysis": ["technical.py"]
+            "scanner": ["backend/scanner/__init__.py", "backend/scanner/breakout_scanner.py", "backend/scanner/screener.py", "backend/scanner/ai_breakout_analyzer.py"],
+            "explosive_moves": [
+                "backend/explosive_moves/__init__.py", "backend/explosive_moves/squeeze_detector.py", 
+                "backend/explosive_moves/volatility.py", "backend/explosive_moves/smart_money.py", 
+                "backend/explosive_moves/integration.py", "backend/explosive_moves/score.py"
+            ],
+            "data_providers": ["backend/data_loader.py"]
         },
         "📁 Frontend": {
-            "": ["app.py"],
-            "components": ["sidebar.py", "charts.py", "cards.py", "file_explorer.py"],
-            "pages": ["dashboard.py", "scanner.py", "file_explorer.py", "analyze.py"],
-            "utils": ["helpers.py", "state.py"],
-            "assets": ["style.css"]
+            "root": ["app.py", "config.py"],
+            "components": ["frontend/components/sidebar.py", "frontend/components/dashboard.py", "frontend/components/file_explorer.py"],
+            "pages": ["frontend/pages/dashboard.py", "frontend/pages/scanner.py", "frontend/pages/analyze.py"],
+            "utils": ["frontend/utils/helpers.py"]
         },
-        "📄 config.py": None,
-        "📄 requirements.txt": None,
-        "📄 README.md": None
+        "📄 Config & System": ["requirements.txt", "README.md"]
     }
     
-    display_file_tree(files)
+    display_file_tree(files_tree)
     
     # عرض محتوى الملف المختار
     if st.session_state.get('show_file', False):
         display_file_content()
 
-def display_file_tree(files):
-    """عرض هيكل الملفات"""
-    for name, content in files.items():
+def display_file_tree(tree):
+    """عرض هيكل الشجرة"""
+    for category, content in tree.items():
         if isinstance(content, dict):
-            with st.expander(name, expanded=False):
+            with st.expander(category, expanded=False):
                 for subfolder, items in content.items():
-                    if subfolder:
+                    if subfolder and subfolder != "root":
                         st.markdown(f"**📂 {subfolder}/**")
-                    for file in items:
-                        display_file_item(file)
-        else:
-            display_file_item(name)
+                    for file_path in items:
+                        display_file_item(file_path)
+        elif isinstance(content, list):
+            with st.expander(category, expanded=False):
+                for file_path in content:
+                    display_file_item(file_path)
 
-def display_file_item(file):
-    """عرض عنصر ملف فردي"""
+def display_file_item(file_path: str):
+    """عرض عنصر ملف فردي وتعيين مفتاح فريد لمنع الاستدعاء المزدوج"""
+    file_display_name = os.path.basename(file_path)
+    # توليد مفتاح فريد يعتمد على المسار الكامل للحد من التضارب
+    unique_key = f"btn_view_{file_path.replace('/', '_').replace('.', '_')}"
+    
     col1, col2 = st.columns([4, 1])
     with col1:
-        st.write(f"   📄 {file}")
+        st.write(f"📄 `{file_display_name}`")
     with col2:
-        if st.button("📖", key=f"file_btn_{file}"):
-            st.session_state.selected_file = file
+        if st.button("📖", key=unique_key, help=f"عرض محتوى {file_path}"):
+            st.session_state.selected_file_path = file_path
             st.session_state.show_file = True
             st.rerun()
 
 def display_file_content():
-    """عرض محتوى الملف"""
-    file_name = st.session_state.selected_file
+    """عرض محتوى الملف المحدد"""
+    file_path = st.session_state.get('selected_file_path', '')
+    if not file_path:
+        return
+
     st.markdown("---")
-    st.subheader(f"📄 محتوى: {file_name}")
+    st.subheader(f"📄 محتوى الملف: `{file_path}`")
     
-    content = get_file_content(file_name)
-    ext = file_name.split('.')[-1] if '.' in file_name else 'txt'
-    lang_map = {'py': 'python', 'js': 'javascript', 'html': 'html', 'css': 'css', 'json': 'json', 'md': 'markdown'}
+    content = get_file_content(file_path)
+    
+    ext = file_path.split('.')[-1] if '.' in file_path else 'txt'
+    lang_map = {
+        'py': 'python', 
+        'js': 'javascript', 
+        'html': 'html', 
+        'css': 'css', 
+        'json': 'json', 
+        'md': 'markdown'
+    }
     lang = lang_map.get(ext, 'text')
     
     st.code(content, language=lang)
     
-    if st.button("❌ إغلاق", key="close_file", width="stretch"):
+    # زر الإغلاق المتوافق
+    try:
+        close_btn = st.button("❌ إغلاق المحرر", key="close_file_viewer", width="stretch")
+    except TypeError:
+        close_btn = st.button("❌ إغلاق المحرر", key="close_file_viewer", use_container_width=True)
+
+    if close_btn:
         st.session_state.show_file = False
-        st.session_state.selected_file = None
+        st.session_state.selected_file_path = None
         st.rerun()
