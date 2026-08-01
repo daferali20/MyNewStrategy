@@ -1,21 +1,15 @@
 # frontend/components/__init__.py
 """
-مكونات الواجهة القابلة لإعادة الاستخدام
+مكونات الواجهة - استيرادات مباشرة
 """
 
-# استيرادات بسيطة فقط
+# استيرادات مباشرة للمكونات الأساسية
 from .sidebar import render_sidebar
-from .charts import create_candlestick_chart, create_score_gauge
-from .cards import metric_card, stock_card, status_badge
+from .charts import create_candlestick_chart
 
-# لا نستورد dashboard هنا لتجنب الدائرية
-# سيتم استيراده عند الحاجة في app.py
+# لا نستورد المكونات الأخرى هنا لتجنب الدائرية
 
 __all__ = [
     'render_sidebar',
-    'create_candlestick_chart',
-    'create_score_gauge',
-    'metric_card',
-    'stock_card',
-    'status_badge'
+    'create_candlestick_chart'
 ]
