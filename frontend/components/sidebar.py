@@ -1,6 +1,6 @@
 # frontend/components/sidebar.py
 """
-مكون الشريط الجانبي - تم إزالة مستكشف الملفات
+مكون الشريط الجانبي - إصلاح اختفاء الصفحات
 """
 
 import streamlit as st
@@ -13,7 +13,7 @@ def render_sidebar():
         st.title("🚀 الماسح الضوئي")
         st.markdown("---")
         
-        # القائمة الرئيسية - بدون مستكشف الملفات
+        # القائمة الرئيسية
         render_main_menu()
         
         st.markdown("---")
@@ -29,7 +29,7 @@ def render_sidebar():
         return st.session_state.get('sidebar_config', {})
 
 def render_main_menu():
-    """عرض القائمة الرئيسية - تم إزالة مستكشف الملفات"""
+    """عرض القائمة الرئيسية"""
     pages = {
         "📊 لوحة التحكم": "dashboard",
         "🔍 مسح السوق": "scanner",
@@ -49,8 +49,7 @@ def render_main_menu():
         "القائمة", 
         list(pages.keys()), 
         index=current_index,
-        key="main_menu_radio",
-        on_change=None
+        key="main_menu_radio"
     )
     
     new_page = pages[selected]
@@ -61,7 +60,6 @@ def render_scan_settings():
     """عرض إعدادات المسح"""
     st.subheader("⚙️ إعدادات المسح")
     
-    # التأكد من وجود sidebar_config
     if 'sidebar_config' not in st.session_state:
         st.session_state.sidebar_config = {}
     
@@ -71,16 +69,14 @@ def render_scan_settings():
         "🎯 درجة الجاهزية", 
         50, 95, 
         config.get('min_score', 70) if config else 70,
-        key="min_score_slider",
-        on_change=None
+        key="min_score_slider"
     )
     
     min_prob = st.slider(
         "📊 احتمالية الانفجار", 
         30, 90, 
         config.get('min_prob', 55) if config else 55,
-        key="min_prob_slider",
-        on_change=None
+        key="min_prob_slider"
     )
     
     sectors = ["الكل", "التكنولوجيا", "المالية", "الرعاية الصحية", "الاستهلاك", "الطاقة"]
@@ -94,16 +90,14 @@ def render_scan_settings():
         "🏢 القطاع", 
         sectors,
         index=sector_index,
-        key="sector_select",
-        on_change=None
+        key="sector_select"
     )
     
     max_symbols = st.slider(
         "📈 عدد الأسهم للمسح",
         5, 30, 
         config.get('max_symbols', 15) if config else 15,
-        key="max_symbols",
-        on_change=None
+        key="max_symbols"
     )
     
     scan_clicked = st.button(
@@ -113,7 +107,6 @@ def render_scan_settings():
         key="scan_button"
     )
     
-    # تحديث الإعدادات في session_state
     st.session_state.sidebar_config = {
         'min_score': min_score,
         'min_prob': min_prob,
