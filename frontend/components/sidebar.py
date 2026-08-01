@@ -7,6 +7,31 @@ import streamlit as st
 from datetime import datetime
 
 def render_sidebar():
+    with st.sidebar:
+        st.title("📍 التنقل الرئيسي")
+        
+        # التأكد من وجود قيمة افتراضية متطابقة
+        if 'current_page' not in st.session_state:
+            st.session_state['current_page'] = 'dashboard'
+
+        # القائمة المربوطة بـ key='nav_radio'
+        selected_page = st.radio(
+            "اختر الصفحة:",
+            options=['dashboard', 'scanner', 'analyze'],
+            format_func=lambda x: {
+                'dashboard': '📊 لوحة التحكم',
+                'scanner': '🔍 المسح الضوئي',
+                'analyze': '🔬 التحليل التفصيلي'
+            }.get(x, x),
+            key='nav_radio',
+            index=['dashboard', 'scanner', 'analyze'].index(st.session_state.get('current_page', 'dashboard'))
+        )
+
+        # تحديث الجلسة في حال تم تغيير الراديو يدوياً بواسطة المستخدم
+        if selected_page != st.session_state.get('current_page'):
+            st.session_state['current_page'] = selected_page
+            st.rerun()
+def render_sidebar():
     """عرض الشريط الجانبي"""
     with st.sidebar:
         # 1. الشعار والعنوان
