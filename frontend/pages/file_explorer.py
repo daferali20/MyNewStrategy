@@ -1,6 +1,6 @@
 # frontend/pages/file_explorer.py
 """
-صفحة مستكشف الملفات
+صفحة مستكشف الملفات - تم إصلاح مشكلة إعادة التحميل
 """
 
 import streamlit as st
@@ -49,15 +49,15 @@ def display_file_tree(files):
             display_file_item(name)
 
 def display_file_item(file):
-    """عرض عنصر ملف فردي"""
+    """عرض عنصر ملف فردي - بدون إعادة تحميل"""
     col1, col2 = st.columns([4, 1])
     with col1:
         st.write(f"   📄 {file}")
     with col2:
+        # استخدام on_click بدلاً من rerun المباشر
         if st.button("📖", key=f"file_btn_{file}"):
             st.session_state.selected_file = file
             st.session_state.show_file = True
-            st.rerun()
 
 def display_file_content():
     """عرض محتوى الملف"""
@@ -75,4 +75,3 @@ def display_file_content():
     if st.button("❌ إغلاق", key="close_file", width="stretch"):
         st.session_state.show_file = False
         st.session_state.selected_file = None
-        st.rerun()
