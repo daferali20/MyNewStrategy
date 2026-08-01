@@ -14,19 +14,30 @@
 ## 🚀 التشغيل
 
 ```bash
-pip install -r requirements.txt
-streamlit run app.py
-MyNewStrategy/
-│
-├── .gitignore               # تجاهل الملفات المؤقتة والبيئة الافتراضية
-├── requirements.txt         # المكتبات المطلوبة للمشروع
-├── README.md                # وصف المشروع وطريقة التشغيل
-├── app.py                   # الصفحة الرئيسية للتطبيق (Streamlit Main)
-│
-├── pages/                   # الواجهات الفرعية في Streamlit
-│   └── 1_📊_Dashboard.py
-│
-└── backend/                 # محرك الحسابات والبيانات (معزول عن الواجهة)
-    ├── __init__.py          # (ملف فارغ لتعريف الموديول)
-    ├── data_loader.py       # جلب البيانات
-    └── analytics.py         # التحليلات والمؤشرات
+MyNewStrategy-main/
+├── app.py                         # المدخل الرئيسي لنظام Streamlit وتوجيه الصفحات
+├── config.py                      # إعدادات النظام، المفاتيح، والمسارات الافتراضية
+├── requirements.txt               # الاعتمادات المكتبية
+├── backend/                       # المحرك الأساسي (Core Engine)
+│   ├── data_loader.py             # جلب بيانات الأسهم (YFinance / AlphaVantage)
+│   ├── scanner/                   # وحدات المسح التكتيكي واكتشاف الفرص
+│   │   ├── ai_breakout_analyzer.py # المحلل الرئيسي مع دمج الذكاء الاصطناعي
+│   │   ├── breakout_scanner.py    # فاحص الاختراقات الفنية
+│   │   ├── intraday_scanner.py    # فاحص المضاربة اللحظية
+│   │   └── screener.py            # فلترة الأسهم المتقدمة
+│   └── explosive_moves/           # موديولات الحركات السعرية المتفجرة (9 ملفات)
+│       ├── squeeze_detector.py    # انضغاط Bollinger Bands & Keltner Channels
+│       ├── volatility.py          # قياس وانكماش التقلبات (ATR / Historical Vol)
+│       ├── compression.py         # انضغاط مدى الشموع (Range Compression)
+│       ├── volume_expansion.py    # انفجار وتحليل الأحجام (Volume Spike)
+│       ├── smart_money.py         # تتبع السيولة الذكية (OBV / VWAP Flow)
+│       ├── breakout_probability.py# احتمالية نجاح الاختراق
+│       ├── options_flow.py        # تدفق العقود والخيارات (اختياري)
+│       ├── ai_predictor.py        # نموذج التنبؤ الذكي
+│       ├── score.py               # تجميع وتصنيف الدرجة النهائية
+│       └── integration.py         # المدمج الشامل لموديل explosive_moves
+└── frontend/                      # طبقة العرض والواجهات (UI Components)
+    ├── assets/style.css           # تنسيقات الواجهة وتأثيرات CSS
+    ├── components/                # المكونات المساعدة (Sidebar, Cards, Charts)
+    ├── pages/                     # الصفحات المستقلة (Dashboard, Scanner, Analyze)
+    └── utils/                     # مساعدة الجلسات (helpers.py, state.py)
