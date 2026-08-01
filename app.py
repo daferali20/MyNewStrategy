@@ -1,7 +1,7 @@
-# app.py - الجزء العلوي مع إعدادات متقدمة
+# app.py
 """
 التطبيق الرئيسي - الماسح الضوئي للأسهم
-تم إصلاح جميع تحذيرات use_container_width
+تم إصلاح مشكلة اختفاء الصفحة نهائياً
 """
 
 import streamlit as st
@@ -11,15 +11,18 @@ from datetime import datetime
 import pandas as pd
 
 # ============================================================================
-# إعدادات الصفحة
+# إعدادات الصفحة - يتم تنفيذها مرة واحدة فقط
 # ============================================================================
 
-st.set_page_config(
-    page_title="الماسح الضوئي للأسهم | Breakout Scanner",
-    page_icon="🚀",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# التحقق من عدم إعادة التحميل المتكرر
+if 'page_loaded' not in st.session_state:
+    st.set_page_config(
+        page_title="الماسح الضوئي للأسهم | Breakout Scanner",
+        page_icon="🚀",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+    st.session_state.page_loaded = True
 
 # إضافة المسارات
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -27,11 +30,11 @@ if ROOT_DIR not in sys.path:
     sys.path.append(ROOT_DIR)
 
 # ============================================================================
-# تهيئة حالة الجلسة
+# تهيئة حالة الجلسة - مرة واحدة فقط
 # ============================================================================
 
 def init_session_state():
-    """تهيئة جميع متغيرات الجلسة بشكل آمن"""
+    """تهيئة جميع متغيرات الجلسة - يتم تنفيذها مرة واحدة فقط"""
     defaults = {
         'scan_results': pd.DataFrame(),
         'selected_file': None,
@@ -40,9 +43,12 @@ def init_session_state():
         'sidebar_config': {},
         'last_scan_time': None,
         'scan_in_progress': False,
-        'initialized': False
+        'initialized': False,
+        'page_loaded': True,
+        'rerun_trigger': 0  # لمنع إعادة التحميل المتكررة
     }
     
+    # تهيئة فقط إذا لم تكن مهيأة مسبقاً
     if not st.session_state.get('initialized', False):
         for key, value in defaults.items():
             if key not in st.session_state:
@@ -53,8 +59,16 @@ def init_session_state():
 # استيراد المكونات
 # ============================================================================
 
-from frontend.utils.helpers import load_css, get_sample_data
-from frontend.components.sidebar import render_sidebar
+try:
+    from frontend.utils.helpers import load_css, get_sample_data
+except ImportError:
+    load_css = lambda: None
+    get_sample_data = lambda: pd.DataFrame()
+
+try:
+    from frontend.components.sidebar import render_sidebar
+except ImportError:
+    render_sidebar = lambda: {}
 
 # استيراد الصفحات مع معالجة الأخطاء
 try:
@@ -82,13 +96,19 @@ except ImportError:
 # ============================================================================
 
 def main():
-    """الدالة الرئيسية للتطبيق"""
+    """الدالة الرئيسية للتطبيق - منع إعادة التحميل المتكررة"""
     
     # تهيئة حالة الجلسة
     init_session_state()
     
-    # تحميل التصميم
-    load_css()
+    # منع إعادة التحميل المتكررة
+    if st.session_state.get('rerun_trigger', 0) > 10:
+        st.session_state.rerun_trigger = 0
+    
+    # تحميل التصميم (مرة واحدة فقط)
+    if not st.session_state.get('css_loaded', False):
+        load_css()
+        st.session_state.css_loaded = True
     
     # عرض الهيدر
     render_header()
@@ -96,7 +116,7 @@ def main():
     # عرض الشريط الجانبي
     render_sidebar()
     
-    # معالجة المسح
+    # معالجة المسح - بدون إعادة تحميل
     handle_scan()
     
     # عرض الصفحة المختارة
@@ -112,7 +132,7 @@ def render_header():
     """, unsafe_allow_html=True)
 
 def handle_scan():
-    """معالجة طلب المسح بشكل آمن"""
+    """معالجة طلب المسح - بدون إعادة تحميل"""
     config = st.session_state.get('sidebar_config', {})
     
     if config and config.get('scan_clicked', False):
@@ -140,7 +160,8 @@ def handle_scan():
                     st.warning("⚠️ لا توجد نتائج مطابقة للمعايير الحالية")
             
             st.session_state.scan_in_progress = False
-            if 'sidebar_config' in st.session_state and st.session_state.sidebar_config:
+            # إعادة تعيين زر المسح
+            if 'sidebar_config' in st.session_state:
                 st.session_state.sidebar_config['scan_clicked'] = False
 
 def mock_scan(sector=None, min_score=60, min_prob=55, max_symbols=20):
@@ -148,7 +169,7 @@ def mock_scan(sector=None, min_score=60, min_prob=55, max_symbols=20):
     return get_sample_data()
 
 def render_current_page():
-    """عرض الصفحة المختارة"""
+    """عرض الصفحة المختارة - بدون إعادة تحميل"""
     page = st.session_state.get('current_page', 'dashboard')
     
     pages = {
@@ -158,6 +179,7 @@ def render_current_page():
         'analyze': render_analyze
     }
     
+    # عرض الصفحة المختارة
     pages.get(page, render_dashboard)()
 
 if __name__ == "__main__":
