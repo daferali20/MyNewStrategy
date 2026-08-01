@@ -16,16 +16,20 @@
 }
 
 /* ============================================================================
-   خلفية ثلاثية الأبعاد مع تأثيرات الحركة
+   الخلفية الأساسية - تم إصلاحها لمنع اختفاء الصفحة
    ============================================================================ */
 
+/* إزالة overflow-x: hidden لمنع اختفاء المحتوى */
 .stApp {
     background: var(--dark-gradient) !important;
     position: relative;
-    overflow-x: hidden;
+    min-height: 100vh;
 }
 
-/* خلفية متحركة - particles */
+/* ============================================================================
+   خلفية متحركة - Particles - تم إصلاحها لتكون خلفية فقط
+   ============================================================================ */
+
 .stApp::before {
     content: '';
     position: fixed;
@@ -34,23 +38,23 @@
     right: 0;
     bottom: 0;
     background-image: 
-        radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)),
-        radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), rgba(0,0,0,0)),
-        radial-gradient(2px 2px at 50px 160px, #ddd, rgba(0,0,0,0)),
-        radial-gradient(2px 2px at 90px 40px, rgba(255,255,255,0.6), rgba(0,0,0,0)),
-        radial-gradient(2px 2px at 130px 80px, #fff, rgba(0,0,0,0)),
-        radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.7), rgba(0,0,0,0));
+        radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.3), transparent),
+        radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.2), transparent),
+        radial-gradient(2px 2px at 50px 160px, rgba(255,255,255,0.3), transparent),
+        radial-gradient(2px 2px at 90px 40px, rgba(255,255,255,0.2), transparent),
+        radial-gradient(2px 2px at 130px 80px, rgba(255,255,255,0.3), transparent),
+        radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.2), transparent);
     background-size: 200px 200px;
     background-repeat: repeat;
-    opacity: 0.15;
+    opacity: 0.1;
     animation: moveParticles 60s linear infinite;
     z-index: 0;
     pointer-events: none;
 }
 
 @keyframes moveParticles {
-    0% { transform: translate(0, 0) rotate(0deg); }
-    100% { transform: translate(-50px, -50px) rotate(360deg); }
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(-50px, -50px); }
 }
 
 /* ============================================================================
@@ -59,79 +63,98 @@
 
 .main-header {
     background: var(--primary-gradient) !important;
-    padding: 30px 35px !important;
-    border-radius: 20px !important;
+    padding: 25px 30px !important;
+    border-radius: 16px !important;
     color: white !important;
-    margin-bottom: 25px !important;
+    margin-bottom: 20px !important;
     position: relative !important;
     overflow: hidden !important;
     box-shadow: 
-        0 20px 40px -10px rgba(0, 0, 0, 0.5),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-    transition: transform 0.4s ease, box-shadow 0.4s ease !important;
+        0 15px 35px -10px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    transition: transform 0.3s ease, box-shadow 0.3s ease !important;
     z-index: 1 !important;
 }
 
 .main-header:hover {
-    transform: translateY(-3px) scale(1.01) !important;
+    transform: translateY(-2px) !important;
     box-shadow: 
-        0 30px 60px -12px rgba(0, 0, 0, 0.6),
-        0 0 40px rgba(102, 126, 234, 0.3) !important;
+        0 25px 50px -12px rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(102, 126, 234, 0.2) !important;
+}
+
+.main-header h1 {
+    font-size: 1.8rem !important;
+    margin: 0 !important;
+    font-weight: 800 !important;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+}
+
+.main-header p {
+    opacity: 0.9 !important;
+    margin-top: 5px !important;
+    font-size: 1rem !important;
 }
 
 /* ============================================================================
-   الشريط الجانبي - ثلاثي الأبعاد مع تأثير زجاجي
+   الشريط الجانبي - تأثير زجاجي محسن
    ============================================================================ */
 
 [data-testid="stSidebar"] {
-    background: rgba(26, 26, 46, 0.95) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.4) !important;
+    background: rgba(26, 26, 46, 0.92) !important;
+    backdrop-filter: blur(15px) !important;
+    -webkit-backdrop-filter: blur(15px) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+    box-shadow: 8px 0 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: #ffffff !important;
 }
 
 /* ============================================================================
    البطاقات والمكونات - ثلاثية الأبعاد
    ============================================================================ */
 
-/* بطاقات المترو - 3D Hover Effect */
 .metric-card {
     background: var(--glass-bg) !important;
     backdrop-filter: blur(12px) !important;
     -webkit-backdrop-filter: blur(12px) !important;
     border: 1px solid var(--glass-border) !important;
-    padding: 20px !important;
-    border-radius: 16px !important;
+    padding: 18px !important;
+    border-radius: 14px !important;
     text-align: center !important;
     transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease !important;
-    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 8px 25px -10px rgba(0, 0, 0, 0.3) !important;
     position: relative !important;
     overflow: hidden !important;
 }
 
 .metric-card:hover {
-    transform: translateY(-6px) scale(1.02) !important;
+    transform: translateY(-4px) !important;
     box-shadow: 
-        0 20px 40px -10px rgba(0, 0, 0, 0.5),
-        0 0 25px rgba(102, 126, 234, 0.2) !important;
-    border-color: rgba(102, 126, 234, 0.4) !important;
+        0 15px 35px -10px rgba(0, 0, 0, 0.4),
+        0 0 20px rgba(102, 126, 234, 0.15) !important;
+    border-color: rgba(102, 126, 234, 0.3) !important;
 }
 
 .metric-card .icon {
-    font-size: 2rem;
-    margin-bottom: 5px;
+    font-size: 1.8rem;
+    margin-bottom: 4px;
 }
 
 .metric-card .value {
-    font-size: 1.8rem;
+    font-size: 1.6rem;
     font-weight: 800;
+    color: #ffffff;
     margin-bottom: 2px;
 }
 
 .metric-card .label {
-    font-size: 0.9rem;
-    opacity: 0.8;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
 }
 
 /* ============================================================================
@@ -142,112 +165,256 @@ button, .stButton > button {
     background: var(--primary-gradient) !important;
     color: white !important;
     border: none !important;
-    padding: 10px 24px !important;
-    border-radius: 12px !important;
-    font-weight: 700 !important;
-    font-size: 0.95rem !important;
+    padding: 8px 20px !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
     transition: transform 0.2s ease, box-shadow 0.2s ease !important;
-    box-shadow: 0 8px 20px -6px rgba(102, 126, 234, 0.4) !important;
+    box-shadow: 0 6px 18px -6px rgba(102, 126, 234, 0.4) !important;
     cursor: pointer !important;
 }
 
 button:hover, .stButton > button:hover {
     transform: translateY(-2px) !important;
-    box-shadow: 0 12px 25px -6px rgba(102, 126, 234, 0.6) !important;
+    box-shadow: 0 10px 22px -6px rgba(102, 126, 234, 0.5) !important;
 }
 
 button:active, .stButton > button:active {
     transform: translateY(1px) !important;
-    box-shadow: 0 4px 10px -4px rgba(102, 126, 234, 0.4) !important;
+    box-shadow: 0 3px 8px -4px rgba(102, 126, 234, 0.3) !important;
 }
 
-/* زر رئيسي - نوع primary */
 button[data-testid="baseButton-primary"] {
     background: var(--secondary-gradient) !important;
-    box-shadow: 0 8px 20px -6px rgba(245, 87, 108, 0.4) !important;
+    box-shadow: 0 6px 18px -6px rgba(245, 87, 108, 0.4) !important;
 }
 
 button[data-testid="baseButton-primary"]:hover {
-    box-shadow: 0 12px 25px -6px rgba(245, 87, 108, 0.6) !important;
+    box-shadow: 0 10px 22px -6px rgba(245, 87, 108, 0.5) !important;
 }
 
 /* ============================================================================
-   الجداول - ثلاثية الأبعاد مع تأثير زجاجي
+   الجداول - تأثير زجاجي
    ============================================================================ */
 
 [data-testid="stDataFrame"] {
     background: var(--glass-bg) !important;
     backdrop-filter: blur(10px) !important;
-    border-radius: 16px !important;
+    border-radius: 14px !important;
     border: 1px solid var(--glass-border) !important;
     overflow: hidden !important;
-    box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 10px 35px -10px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-testid="stDataFrame"] table {
+    background: transparent !important;
+}
+
+[data-testid="stDataFrame"] thead th {
+    background: rgba(102, 126, 234, 0.15) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    padding: 10px !important;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.2) !important;
+}
+
+[data-testid="stDataFrame"] tbody td {
+    color: #e0e0e0 !important;
+    padding: 8px 10px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-testid="stDataFrame"] tbody tr:hover {
+    background: rgba(102, 126, 234, 0.08) !important;
 }
 
 /* ============================================================================
-   الرسوم البيانية والمؤشرات
+   الرسوم البيانية
    ============================================================================ */
 
 .js-plotly-plot {
     background: var(--glass-bg) !important;
     backdrop-filter: blur(10px) !important;
-    border-radius: 16px !important;
+    border-radius: 14px !important;
     border: 1px solid var(--glass-border) !important;
-    padding: 10px !important;
-    box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.3) !important;
+    padding: 8px !important;
+    box-shadow: 0 10px 35px -10px rgba(0, 0, 0, 0.3) !important;
 }
 
-/* النصوص العادية والعناوين */
-h1, h2, h3, h4 {
+/* ============================================================================
+   النصوص والعناوين
+   ============================================================================ */
+
+h1, h2, h3, h4, h5, h6 {
     color: #ffffff !important;
-    font-weight: 800 !important;
+    font-weight: 700 !important;
 }
 
-/* شارات الحالة Status Badges */
+p, span, div, label {
+    color: #e0e0e0 !important;
+}
+
+/* ============================================================================
+   شارات الحالة Status Badges
+   ============================================================================ */
+
 .status-badge {
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: bold;
+    padding: 3px 10px;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
     display: inline-block;
 }
 
 .status-badge.buy {
     background: rgba(0, 230, 118, 0.2);
     color: #00E676;
-    border: 1px solid rgba(0, 230, 118, 0.4);
+    border: 1px solid rgba(0, 230, 118, 0.3);
 }
 
 .status-badge.hold {
     background: rgba(255, 193, 7, 0.2);
     color: #FFC107;
-    border: 1px solid rgba(255, 193, 7, 0.4);
+    border: 1px solid rgba(255, 193, 7, 0.3);
 }
 
 .status-badge.sell {
     background: rgba(255, 82, 82, 0.2);
     color: #FF5252;
-    border: 1px solid rgba(255, 82, 82, 0.4);
+    border: 1px solid rgba(255, 82, 82, 0.3);
 }
 
 /* ============================================================================
-   شريط التمرير Scrollbar
+   شريط التمرير - محسن
    ============================================================================ */
 
 ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-    background: rgba(26, 26, 46, 0.8);
+    background: rgba(26, 26, 46, 0.6);
+    border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #667eea;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #764ba2;
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+/* ============================================================================
+   عناصر Streamlit إضافية محسنة
+   ============================================================================ */
+
+/* تحسين مظهر السلايدرات */
+[data-testid="stSlider"] > div {
+    background: var(--glass-bg) !important;
+    border-radius: 10px !important;
+    padding: 8px 12px !important;
+    border: 1px solid var(--glass-border) !important;
+}
+
+/* تحسين مظهر السيلكت بوكس */
+[data-testid="stSelectbox"] > div {
+    background: var(--glass-bg) !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--glass-border) !important;
+}
+
+/* تحسين مظهر الإكسباندر */
+[data-testid="stExpander"] {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(10px) !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--glass-border) !important;
+}
+
+[data-testid="stExpander"] summary {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+/* تحسين مظهر المترو Metrics */
+[data-testid="stMetric"] {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(10px) !important;
+    border-radius: 12px !important;
+    padding: 12px !important;
+    border: 1px solid var(--glass-border) !important;
+}
+
+[data-testid="stMetric"] label {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-testid="stMetric"] div {
+    color: #ffffff !important;
+}
+
+/* ============================================================================
+   صندوق معلومات Info Box
+   ============================================================================ */
+
+[data-testid="stAlert"] {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(10px) !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--glass-border) !important;
+}
+
+/* ============================================================================
+   شريط التقدم Progress Bar
+   ============================================================================ */
+
+[data-testid="stProgress"] > div {
+    background: var(--glass-bg) !important;
+    border-radius: 20px !important;
+    border: 1px solid var(--glass-border) !important;
+    height: 8px !important;
+}
+
+[data-testid="stProgress"] > div > div {
+    background: var(--primary-gradient) !important;
+    border-radius: 20px !important;
+}
+
+/* ============================================================================
+   التوست Toast Messages
+   ============================================================================ */
+
+[data-testid="stToast"] {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(20px) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 12px !important;
+    color: #ffffff !important;
+}
+
+/* ============================================================================
+   عناصر إضافية - تحسين التوافق
+   ============================================================================ */
+
+/* التأكد من ظهور جميع المحتويات */
+.block-container {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
+
+/* تحسين مظهر العناصر التفاعلية */
+.element-container {
+    margin-bottom: 0.5rem !important;
+}
+
+/* إزالة أي تأثيرات قد تسبب اختفاء المحتوى */
+.st-emotion-cache-18ni7ap {
+    background: transparent !important;
+}
+
+.st-emotion-cache-1v0mbdj {
+    background: transparent !important;
 }
