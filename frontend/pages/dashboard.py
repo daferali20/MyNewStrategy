@@ -1,6 +1,6 @@
 # frontend/pages/dashboard.py
 """
-صفحة لوحة التحكم
+صفحة لوحة التحكم - تم إصلاح مشكلة None
 """
 
 import streamlit as st
@@ -60,9 +60,11 @@ def display_metrics():
         """, unsafe_allow_html=True)
 
 def display_scan_results():
-    """عرض نتائج المسح"""
-    if not st.session_state.get('scan_results', pd.DataFrame()).empty:
-        df = st.session_state.scan_results
+    """عرض نتائج المسح - مع التحقق من None"""
+    results = st.session_state.get('scan_results')
+    
+    if results is not None and not results.empty:
+        df = results
         
         st.subheader("📋 نتائج المسح")
         st.dataframe(
