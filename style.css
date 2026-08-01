@@ -1,0 +1,253 @@
+/* frontend/assets/style.css */
+/* تصميم ثلاثي الأبعاد احترافي ومحسن للماسح الضوئي للأسهم */
+
+/* ============================================================================
+   المتغيرات العامة والإعدادات الأساسية
+   ============================================================================ */
+
+:root {
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --dark-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --shadow-3d: 0 20px 60px rgba(0, 0, 0, 0.5);
+    --neon-glow: 0 0 30px rgba(102, 126, 234, 0.3);
+}
+
+/* ============================================================================
+   خلفية ثلاثية الأبعاد مع تأثيرات الحركة
+   ============================================================================ */
+
+.stApp {
+    background: var(--dark-gradient) !important;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* خلفية متحركة - particles */
+.stApp::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 50px 160px, #ddd, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 90px 40px, rgba(255,255,255,0.6), rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 130px 80px, #fff, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.7), rgba(0,0,0,0));
+    background-size: 200px 200px;
+    background-repeat: repeat;
+    opacity: 0.15;
+    animation: moveParticles 60s linear infinite;
+    z-index: 0;
+    pointer-events: none;
+}
+
+@keyframes moveParticles {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(-50px, -50px) rotate(360deg); }
+}
+
+/* ============================================================================
+   الهيدر الرئيسي - ثلاثي الأبعاد
+   ============================================================================ */
+
+.main-header {
+    background: var(--primary-gradient) !important;
+    padding: 30px 35px !important;
+    border-radius: 20px !important;
+    color: white !important;
+    margin-bottom: 25px !important;
+    position: relative !important;
+    overflow: hidden !important;
+    box-shadow: 
+        0 20px 40px -10px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+    transition: transform 0.4s ease, box-shadow 0.4s ease !important;
+    z-index: 1 !important;
+}
+
+.main-header:hover {
+    transform: translateY(-3px) scale(1.01) !important;
+    box-shadow: 
+        0 30px 60px -12px rgba(0, 0, 0, 0.6),
+        0 0 40px rgba(102, 126, 234, 0.3) !important;
+}
+
+/* ============================================================================
+   الشريط الجانبي - ثلاثي الأبعاد مع تأثير زجاجي
+   ============================================================================ */
+
+[data-testid="stSidebar"] {
+    background: rgba(26, 26, 46, 0.95) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* ============================================================================
+   البطاقات والمكونات - ثلاثية الأبعاد
+   ============================================================================ */
+
+/* بطاقات المترو - 3D Hover Effect */
+.metric-card {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid var(--glass-border) !important;
+    padding: 20px !important;
+    border-radius: 16px !important;
+    text-align: center !important;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease !important;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3) !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.metric-card:hover {
+    transform: translateY(-6px) scale(1.02) !important;
+    box-shadow: 
+        0 20px 40px -10px rgba(0, 0, 0, 0.5),
+        0 0 25px rgba(102, 126, 234, 0.2) !important;
+    border-color: rgba(102, 126, 234, 0.4) !important;
+}
+
+.metric-card .icon {
+    font-size: 2rem;
+    margin-bottom: 5px;
+}
+
+.metric-card .value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 2px;
+}
+
+.metric-card .label {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+/* ============================================================================
+   الأزرار - ثلاثية الأبعاد مع تأثير النقر
+   ============================================================================ */
+
+button, .stButton > button {
+    background: var(--primary-gradient) !important;
+    color: white !important;
+    border: none !important;
+    padding: 10px 24px !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    box-shadow: 0 8px 20px -6px rgba(102, 126, 234, 0.4) !important;
+    cursor: pointer !important;
+}
+
+button:hover, .stButton > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 12px 25px -6px rgba(102, 126, 234, 0.6) !important;
+}
+
+button:active, .stButton > button:active {
+    transform: translateY(1px) !important;
+    box-shadow: 0 4px 10px -4px rgba(102, 126, 234, 0.4) !important;
+}
+
+/* زر رئيسي - نوع primary */
+button[data-testid="baseButton-primary"] {
+    background: var(--secondary-gradient) !important;
+    box-shadow: 0 8px 20px -6px rgba(245, 87, 108, 0.4) !important;
+}
+
+button[data-testid="baseButton-primary"]:hover {
+    box-shadow: 0 12px 25px -6px rgba(245, 87, 108, 0.6) !important;
+}
+
+/* ============================================================================
+   الجداول - ثلاثية الأبعاد مع تأثير زجاجي
+   ============================================================================ */
+
+[data-testid="stDataFrame"] {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(10px) !important;
+    border-radius: 16px !important;
+    border: 1px solid var(--glass-border) !important;
+    overflow: hidden !important;
+    box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ============================================================================
+   الرسوم البيانية والمؤشرات
+   ============================================================================ */
+
+.js-plotly-plot {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(10px) !important;
+    border-radius: 16px !important;
+    border: 1px solid var(--glass-border) !important;
+    padding: 10px !important;
+    box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* النصوص العادية والعناوين */
+h1, h2, h3, h4 {
+    color: #ffffff !important;
+    font-weight: 800 !important;
+}
+
+/* شارات الحالة Status Badges */
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    display: inline-block;
+}
+
+.status-badge.buy {
+    background: rgba(0, 230, 118, 0.2);
+    color: #00E676;
+    border: 1px solid rgba(0, 230, 118, 0.4);
+}
+
+.status-badge.hold {
+    background: rgba(255, 193, 7, 0.2);
+    color: #FFC107;
+    border: 1px solid rgba(255, 193, 7, 0.4);
+}
+
+.status-badge.sell {
+    background: rgba(255, 82, 82, 0.2);
+    color: #FF5252;
+    border: 1px solid rgba(255, 82, 82, 0.4);
+}
+
+/* ============================================================================
+   شريط التمرير Scrollbar
+   ============================================================================ */
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(26, 26, 46, 0.8);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #764ba2;
+}
