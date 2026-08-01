@@ -259,4 +259,116 @@ class IntradayScanner:
             if 50 <= indicators['rsi'] <= 60:
                 rsi_score = 100
             else:
-                rsi_score = max(0, 100 - abs(
+                rsi_score = max(0, 100 - abs(indicators['rsi'] - 55) * 3)
+            score += rsi_score * 0.25
+        
+        # 4. MACD (20%)
+        score += 100 if indicators['macd_cross'] else 0
+        score *= 0.20
+        
+        return min(100, score)
+
+
+# ============================================================================
+# دوال مساعدة
+# ============================================================================
+
+def scan_intraday_breakouts(symbols: List[str],
+                           timeframe: str = "15min",
+                           data_provider=None,
+                           min_score: float = 60) -> List[Dict]:
+    """
+    مسح الانفجارات داخل اليوم لقائمة من الأسهم
+    
+    Args:
+        symbols: قائمة الرموز
+        timeframe: الفريم الزمني
+        data_provider: مزود البيانات
+        min_score: الحد الأدنى للدرجة
+    
+    Returns:
+        قائمة بالإشارات
+    """
+    scanner = IntradayScanner()
+    signals = []
+    
+    for symbol in symbols:
+        try:
+            if data_provider is None:
+                import yfinance as yf
+                ticker = yf.Ticker(symbol)
+                # جلب بيانات اليوم
+                df = ticker.history(period="5d", interval=timeframe)
+            else:
+                df = data_provider(symbol).get_intraday(interval=timeframe)
+            
+            if df is None or df.empty:
+                continue
+            
+            signal = scanner.analyze(df, symbol=symbol, timeframe=timeframe)
+            
+            if signal and signal.score >= min_score:
+                signals.append(signal.to_dict())
+                
+        except Exception as e:
+            print(f"⚠️ خطأ في مسح {symbol}: {e}")
+            continue
+    
+    # ترتيب حسب الدرجة
+    signals.sort(key=lambda x: x['score'], reverse=True)
+    return signals
+
+
+def get_top_intraday_opportunities(symbols: List[str],
+                                  limit: int = 10,
+                                  timeframe: str = "15min") -> pd.DataFrame:
+    """
+    الحصول على أفضل فرص الانفجار داخل اليوم
+    
+    Returns:
+        DataFrame بالفرص
+    """
+    signals = scan_intraday_breakouts(symbols, timeframe)
+    
+    if not signals:
+        return pd.DataFrame()
+    
+    df = pd.DataFrame(signals[:limit])
+    
+    # اختيار الأعمدة المناسبة للعرض
+    display_cols = ['symbol', 'timeframe', 'breakout_price', 'current_price',
+                   'volume_surge', 'rsi', 'score', 'target_1', 'target_2']
+    
+    return df[display_cols] if all(col in df.columns for col in display_cols) else df
+
+
+# ============================================================================
+# مثال للاستخدام
+# ============================================================================
+
+if __name__ == "__main__":
+    # اختبار الماسح الداخلي اليومي
+    import yfinance as yf
+    
+    print("🔍 اختبار الماسح الداخلي اليومي...")
+    
+    # تحليل سهم واحد
+    ticker = yf.Ticker("AAPL")
+    df = ticker.history(period="5d", interval="15m")
+    
+    scanner = IntradayScanner()
+    signal = scanner.analyze(df, symbol="AAPL", timeframe="15min")
+    
+    if signal:
+        print(f"\n📊 إشارة انفجار داخل اليوم:")
+        print(f"السهم: {signal.symbol}")
+        print(f"الفريم: {signal.timeframe}")
+        print(f"سعر الاختراق: ${signal.breakout_price:.2f}")
+        print(f"حجم التداول: {signal.volume_surge}x")
+        print(f"RSI: {signal.rsi}")
+        print(f"الدرجة: {signal.score}/100")
+        print(f"وقف الخسارة: ${signal.stop_loss:.2f}")
+        print(f"الهدف 1: ${signal.target_1:.2f}")
+        print(f"الهدف 2: ${signal.target_2:.2f}")
+    else:
+        print("❌ لا توجد إشارة حالياً")
