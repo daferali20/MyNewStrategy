@@ -1,6 +1,6 @@
 # frontend/pages/file_explorer.py
 """
-صفحة مستكشف الملفات - تم إصلاح مشكلة إعادة التحميل
+صفحة مستكشف الملفات - تم إصلاح use_container_width
 """
 
 import streamlit as st
@@ -49,12 +49,11 @@ def display_file_tree(files):
             display_file_item(name)
 
 def display_file_item(file):
-    """عرض عنصر ملف فردي - بدون إعادة تحميل"""
+    """عرض عنصر ملف فردي"""
     col1, col2 = st.columns([4, 1])
     with col1:
         st.write(f"   📄 {file}")
     with col2:
-        # استخدام on_click بدلاً من rerun المباشر
         if st.button("📖", key=f"file_btn_{file}"):
             st.session_state.selected_file = file
             st.session_state.show_file = True
