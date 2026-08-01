@@ -1,17 +1,22 @@
 # frontend/pages/dashboard.py
 """
-صفحة لوحة التحكم - آمنة ومتوافقة مع تحديثات Streamlit
+صفحة لوحة التحكم - تم إصلاح use_container_width
 """
 
 import streamlit as st
 import pandas as pd
+from frontend.utils.helpers import get_sample_data
 
 def render():
     """عرض لوحة التحكم"""
     st.subheader("📊 نظرة عامة على السوق")
     
+    # بطاقات إحصائيات
     display_metrics()
+    
     st.markdown("---")
+    
+    # عرض نتائج المسح
     display_scan_results()
 
 def display_metrics():
@@ -58,15 +63,25 @@ def display_scan_results():
     """عرض نتائج المسح"""
     results = st.session_state.get('scan_results')
     
-    if results is not None and isinstance(results, pd.DataFrame) and not results.empty:
+    if results is not None and not results.empty:
         df = results
-        st.subheader("📋 نتائج المسح")
         
-        try:
-            st.dataframe(df, width="stretch", hide_index=True)
-            st.caption(f"✅ تم العثور على {len(df)} فرصة مطابقة للمعايير")
-        except Exception:
-            st.dataframe(df, hide_index=True)
+        st.subheader("📋 نتائج المسح")
+        # تم التحديث: use_container_width=True → width='stretch'
+        st.dataframe(
+            df,
+            column_config={
+                "symbol": st.column_config.TextColumn("الرمز", width="small"),
+                "name": st.column_config.TextColumn("الشركة"),
+                "sector": st.column_config.TextColumn("القطاع", width="small"),
+                "current_price": st.column_config.NumberColumn("السعر", format="$%.2f"),
+                "squeeze_score": st.column_config.ProgressColumn("درجة الضغط", format="%d/100", min_value=0, max_value=100),
+                "breakout_probability": st.column_config.ProgressColumn("احتمالية الانفجار", format="%.1f%%", min_value=0, max_value=100)
+            },
+            width='stretch',
+            hide_index=True
+        )
+        st.caption(f"✅ تم العثور على {len(df)} فرصة مطابقة للمعايير")
     else:
         st.info("👆 اضغط 'ابدأ المسح' في الشريط الجانبي للحصول على النتائج")
         display_sample_preview()
@@ -74,10 +89,6 @@ def display_scan_results():
 def display_sample_preview():
     """عرض نموذج للنتائج"""
     with st.expander("📋 نموذج للنتائج المتوقعة"):
-        try:
-            from frontend.utils.helpers import get_sample_data
-            sample_data = get_sample_data()
-            if sample_data is not None and not sample_data.empty:
-                st.dataframe(sample_data, width="stretch", hide_index=True)
-        except Exception as e:
-            st.warning(f"⚠️ تعذر تحميل العينة: {e}")
+        sample_data = get_sample_data()
+        # تم التحديث: use_container_width=True → width='stretch'
+        st.dataframe(sample_data, width='stretch', hide_index=True)
