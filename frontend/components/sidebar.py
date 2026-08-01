@@ -51,19 +51,18 @@ def render_sidebar():
         # تحديد الفهرس الحالي بأمان
         default_index = pages_keys.index(current_page) if current_page in pages_keys else 0
 
-        # خيار التنقل عبر Radio Button المربوط بمفتاح 'nav_radio'
+        # خيار التنقل عبر Radio Button - استخدام key فريد
         selected_page = st.radio(
             "اختر الصفحة:",
             options=pages_keys,
             format_func=lambda x: pages_map.get(x, x),
             index=default_index,
-            key='nav_radio'
+            key='sidebar_nav_radio'  # تم تغيير المفتاح لمنع التعارض
         )
 
-        # التزامن العكسي: إذا قام المستخدم بالتغيير من الشريط الجانبي يدوياً
+        # تحديث الصفحة الحالية (بدون st.rerun() لتجنب إعادة التحميل المتكررة)
         if selected_page != st.session_state.get('current_page'):
             st.session_state['current_page'] = selected_page
-            st.rerun()
 
         st.markdown("---")
 
@@ -74,10 +73,15 @@ def render_sidebar():
 
         # اختيار القطاع
         sectors = ['الكل', 'التكنولوجيا', 'الرعاية الصحية', 'الخدمات المالية', 'الطاقة', 'الصناعة']
+        
+        # الحصول على القطاع المخزن أو استخدام الافتراضي
+        saved_sector = st.session_state.get('sidebar_sector', DEFAULT_SETTINGS.get('sector', 'الكل'))
+        sector_index = sectors.index(saved_sector) if saved_sector in sectors else 0
+        
         selected_sector = st.selectbox(
             "القطاع المستهدف:",
             options=sectors,
-            index=0,
+            index=sector_index,
             key='sidebar_sector'
         )
 
@@ -86,7 +90,7 @@ def render_sidebar():
             "الحد الأدنى لدرجة الجاهزية (Score):",
             min_value=50,
             max_value=95,
-            value=DEFAULT_SETTINGS.get('min_score', 70),
+            value=int(DEFAULT_SETTINGS.get('min_score', 70)),
             step=5,
             key='sidebar_min_score'
         )
@@ -96,7 +100,7 @@ def render_sidebar():
             "الحد الأدنى للاحتمالية (%):",
             min_value=40,
             max_value=90,
-            value=DEFAULT_SETTINGS.get('min_prob', 55),
+            value=int(DEFAULT_SETTINGS.get('min_prob', 55)),
             step=5,
             key='sidebar_min_prob'
         )
@@ -106,7 +110,7 @@ def render_sidebar():
             "أقصى عدد للأسهم:",
             min_value=5,
             max_value=50,
-            value=DEFAULT_SETTINGS.get('max_symbols', 15),
+            value=int(DEFAULT_SETTINGS.get('max_symbols', 15)),
             step=5,
             key='sidebar_max_symbols'
         )
@@ -119,22 +123,21 @@ def render_sidebar():
         scan_clicked = st.button(
             "🚀 بدء المسح الضوئي الان",
             type="primary",
-            use_container_width=True,
+            width="stretch",  # تم التحديث: use_container_width → width
             key='btn_start_scan_sidebar'
         )
 
-        # معالجة النقر على الزر
+        # معالجة النقر على الزر - بدون st.rerun()
         if scan_clicked:
             # توجيه تلقائي لصفحة المسح الضوئي
             st.session_state['current_page'] = 'scanner'
-            st.session_state['nav_radio'] = 'scanner'
 
-        # تجميع وحفظ الإعدادات في الجلسة لاستخدامها في app.py
+        # تجميع وحفظ الإعدادات في الجلسة
         config = {
-            'sector': selected_sector,
-            'min_score': min_score,
-            'min_prob': min_prob,
-            'max_symbols': max_symbols,
+            'sector': None if selected_sector == "الكل" else selected_sector,
+            'min_score': int(min_score),
+            'min_prob': int(min_prob),
+            'max_symbols': int(max_symbols),
             'scan_clicked': scan_clicked
         }
         
@@ -144,5 +147,6 @@ def render_sidebar():
         st.markdown("---")
         if st.session_state.get('last_scan_time'):
             st.caption(f"⏱️ آخر مسح: {st.session_state.last_scan_time}")
+        st.caption(f"🕐 {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
         return config
