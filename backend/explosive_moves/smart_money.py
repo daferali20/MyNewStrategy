@@ -128,4 +128,56 @@ class SmartMoneyAnalyzer:
                 patterns.append("تراكم في نطاق ضيق")
         
         # نمط 2: كسر مع حجم مرتفع
-        if volume.iloc[-1] > volume.iloc[-5:-1].
+        if volume.iloc[-1] > volume.iloc[-5:-1].mean() * 2:
+            if close.iloc[-1] > close.iloc[-5:-1].max():
+                patterns.append("كسر صاعد بحجم مرتفع")
+            elif close.iloc[-1] < close.iloc[-5:-1].min():
+                patterns.append("كسر هابط بحجم مرتفع")
+        
+        # نمط 3: شمعة انعكاس مع حجم
+        if len(df) > 2:
+            if close.iloc[-1] > close.iloc[-2] * 1.02:
+                if volume.iloc[-1] > volume.iloc[-2] * 1.3:
+                    patterns.append("شمعة صاعدة قوية")
+            elif close.iloc[-1] < close.iloc[-2] * 0.98:
+                if volume.iloc[-1] > volume.iloc[-2] * 1.3:
+                    patterns.append("شمعة هابطة قوية")
+        
+        return patterns if patterns else ["لا توجد أنماط واضحة"]
+    
+    def _calculate_smart_score(self, buy: float, sell: float, 
+                               accumulation: bool, distribution: bool,
+                               patterns: List[str]) -> float:
+        """حساب درجة السيولة الذكية"""
+        score = 50  # قيمة محايدة
+        
+        # ضغط الشراء والبيع
+        if buy > 60:
+            score += 15
+        elif sell > 60:
+            score -= 15
+        
+        # التراكم والتوزيع
+        if accumulation:
+            score += 20
+        if distribution:
+            score -= 20
+        
+        # الأنماط
+        if len(patterns) > 1:
+            score += 10
+        
+        return max(0, min(100, score))
+    
+    def _get_signal(self, score: float, accumulation: bool, distribution: bool) -> str:
+        """تحديد الإشارة بناءً على التحليل"""
+        if score > 70 and accumulation:
+            return "شراء قوي"
+        elif score > 60 and accumulation:
+            return "شراء"
+        elif score < 30 and distribution:
+            return "بيع قوي"
+        elif score < 40 and distribution:
+            return "بيع"
+        else:
+            return "محايد"
