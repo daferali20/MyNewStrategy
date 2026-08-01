@@ -1,6 +1,6 @@
 # frontend/pages/scanner.py
 """
-صفحة مسح السوق - تم إصلاح مشكلة إعادة التحميل
+صفحة مسح السوق - تم إصلاح مشكلة None
 """
 
 import streamlit as st
@@ -12,24 +12,28 @@ def render():
     """عرض صفحة المسح"""
     st.subheader("🔍 مسح السوق الآلي")
     
-    # عرض الإعدادات الحالية
+    # عرض الإعدادات الحالية - مع التحقق من None
     config = st.session_state.get('sidebar_config', {})
+    if config is None:
+        config = {}
+    
     display_current_settings(config)
     
     st.markdown("---")
     
-    # زر التحديث - بدون إعادة تحميل تلقائي
+    # زر التحديث
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
         if st.button("🔄 تحديث النتائج", type="primary", key="refresh_scan", width="stretch"):
             run_scan(config)
     
     # عرض النتائج
-    if not st.session_state.get('scan_results', pd.DataFrame()).empty:
-        display_results()
+    results = st.session_state.get('scan_results')
+    if results is not None and not results.empty:
+        display_results(results)
 
 def display_current_settings(config):
-    """عرض الإعدادات الحالية"""
+    """عرض الإعدادات الحالية - مع التحقق من None"""
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("🎯 درجة الجاهزية", f"{config.get('min_score', 70)}/100")
@@ -40,7 +44,7 @@ def display_current_settings(config):
         st.metric("🏢 القطاع", sector)
 
 def run_scan(config):
-    """تشغيل عملية المسح - بدون إعادة تحميل الصفحة"""
+    """تشغيل عملية المسح"""
     try:
         from backend.scanner.ai_breakout_analyzer import scan_market_ai
     except ImportError:
@@ -59,13 +63,11 @@ def run_scan(config):
             st.session_state.scan_results = results
             st.session_state.last_scan_time = datetime.now().strftime('%H:%M:%S')
             st.success(f"✅ تم العثور على {len(results)} فرصة!")
-            # إزالة st.rerun() لمنع إعادة تحميل الصفحة
         else:
             st.warning("⚠️ لا توجد نتائج مطابقة للمعايير الحالية")
 
-def display_results():
+def display_results(df):
     """عرض النتائج"""
-    df = st.session_state.scan_results
     st.subheader(f"📊 النتائج ({len(df)})")
     st.dataframe(df, width="stretch", hide_index=True)
     
