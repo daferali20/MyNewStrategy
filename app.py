@@ -1,7 +1,7 @@
 # app.py
 """
 التطبيق الرئيسي - الماسح الضوئي للأسهم
-تم إصلاح مشكلة اختفاء الصفحة
+تم إصلاح جميع مشاكل None
 """
 
 import streamlit as st
@@ -26,23 +26,22 @@ if ROOT_DIR not in sys.path:
     sys.path.append(ROOT_DIR)
 
 # ============================================================================
-# تهيئة حالة الجلسة - يتم مرة واحدة فقط
+# تهيئة حالة الجلسة
 # ============================================================================
 
 def init_session_state():
-    """تهيئة جميع متغيرات الجلسة - مرة واحدة فقط"""
+    """تهيئة جميع متغيرات الجلسة بشكل آمن"""
     defaults = {
-        'scan_results': None,
+        'scan_results': pd.DataFrame() if 'pd' in dir() else None,
         'selected_file': None,
         'show_file': False,
         'current_page': 'dashboard',
-        'sidebar_config': None,
+        'sidebar_config': {},
         'last_scan_time': None,
         'scan_in_progress': False,
         'initialized': False
     }
     
-    # تهيئة فقط إذا لم تكن مهيأة مسبقاً
     if not st.session_state.get('initialized', False):
         for key, value in defaults.items():
             if key not in st.session_state:
@@ -54,10 +53,9 @@ def init_session_state():
 # ============================================================================
 
 from frontend.utils.helpers import load_css, get_sample_data
-from frontend.utils.state import init_session_state as init_state
 from frontend.components.sidebar import render_sidebar
 
-# استيراد الصفحات
+# استيراد الصفحات مع معالجة الأخطاء
 try:
     from frontend.pages.dashboard import render as render_dashboard
 except ImportError:
@@ -85,7 +83,7 @@ except ImportError:
 def main():
     """الدالة الرئيسية للتطبيق"""
     
-    # تهيئة حالة الجلسة (مرة واحدة)
+    # تهيئة حالة الجلسة
     init_session_state()
     
     # تحميل التصميم
@@ -97,7 +95,7 @@ def main():
     # عرض الشريط الجانبي
     render_sidebar()
     
-    # معالجة المسح (بدون إعادة تحميل)
+    # معالجة المسح
     handle_scan()
     
     # عرض الصفحة المختارة
@@ -113,11 +111,10 @@ def render_header():
     """, unsafe_allow_html=True)
 
 def handle_scan():
-    """معالجة طلب المسح - بدون إعادة تحميل"""
-    config = st.session_state.get('sidebar_config')
+    """معالجة طلب المسح بشكل آمن"""
+    config = st.session_state.get('sidebar_config', {})
     
     if config and config.get('scan_clicked', False):
-        # منع التنفيذ المتكرر
         if not st.session_state.get('scan_in_progress', False):
             st.session_state.scan_in_progress = True
             
@@ -134,17 +131,17 @@ def handle_scan():
                     max_symbols=config.get('max_symbols', 15)
                 )
                 
-                if not results.empty:
+                if results is not None and not results.empty:
                     st.session_state.scan_results = results
                     st.session_state.last_scan_time = datetime.now().strftime('%H:%M:%S')
                     st.success(f"✅ تم العثور على {len(results)} فرصة!")
                 else:
                     st.warning("⚠️ لا توجد نتائج مطابقة للمعايير الحالية")
             
-            # إعادة تعيين حالة المسح
             st.session_state.scan_in_progress = False
-            # إعادة تعيين زر المسح لمنع التكرار
-            st.session_state.sidebar_config['scan_clicked'] = False
+            # إعادة تعيين زر المسح
+            if 'sidebar_config' in st.session_state and st.session_state.sidebar_config:
+                st.session_state.sidebar_config['scan_clicked'] = False
 
 def mock_scan(sector=None, min_score=60, min_prob=55, max_symbols=20):
     """دالة مسح نموذجية"""
