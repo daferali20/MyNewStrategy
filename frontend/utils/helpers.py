@@ -1,13 +1,11 @@
 # frontend/utils/helpers.py
 """
-دوال مساعدة للتطبيق
-تم إعادة تنظيمها لتجنب الاستيرادات الدائرية
+دوال مساعدة للتطبيق - تم إعادة تنظيمها بالكامل
 """
 
 import pandas as pd
 import streamlit as st
 import os
-from datetime import datetime
 
 # ============================================================================
 # إعدادات المسارات
@@ -201,13 +199,13 @@ def is_valid_symbol(symbol):
     return symbol.isalnum()
 
 # ============================================================================
-# دوال جلب البيانات (يتم استيرادها بشكل منفصل لتجنب الدائرية)
+# دوال جلب البيانات (مع استيراد متأخر لتجنب الدائرية)
 # ============================================================================
 
 def get_stock_data(symbol, period="6mo"):
-    """جلب بيانات السهم - استيراد متأخر لتجنب الدائرية"""
-    import yfinance as yf
+    """جلب بيانات السهم"""
     try:
+        import yfinance as yf
         ticker = yf.Ticker(symbol)
         df = ticker.history(period=period)
         return df if not df.empty else pd.DataFrame()
@@ -215,10 +213,79 @@ def get_stock_data(symbol, period="6mo"):
         return pd.DataFrame()
 
 def get_stock_info(symbol):
-    """جلب معلومات الشركة - استيراد متأخر لتجنب الدائرية"""
-    import yfinance as yf
+    """جلب معلومات الشركة"""
     try:
+        import yfinance as yf
         ticker = yf.Ticker(symbol)
         return ticker.info
     except:
         return {}
+
+# ============================================================================
+# دوال الملفات (دوال مستقلة)
+# ============================================================================
+
+def get_file_content(filename):
+    """
+    جلب محتوى ملف من المشروع
+    
+    Args:
+        filename: اسم الملف
+    
+    Returns:
+        محتوى الملف كنص
+    """
+    # خريطة الملفات الفعلية
+    file_paths = {
+        "app.py": "app.py",
+        "config.py": "config.py",
+        "requirements.txt": "requirements.txt",
+        "README.md": "README.md",
+        "breakout_scanner.py": "backend/scanner/breakout_scanner.py",
+        "screener.py": "backend/scanner/screener.py",
+        "ai_breakout_analyzer.py": "backend/scanner/ai_breakout_analyzer.py",
+        "__init__.py": "backend/scanner/__init__.py",
+        "sidebar.py": "frontend/components/sidebar.py",
+        "charts.py": "frontend/components/charts.py",
+        "cards.py": "frontend/components/cards.py",
+        "dashboard.py": "frontend/pages/dashboard.py",
+        "scanner.py": "frontend/pages/scanner.py",
+        "file_explorer.py": "frontend/pages/file_explorer.py",
+        "analyze.py": "frontend/pages/analyze.py",
+        "helpers.py": "frontend/utils/helpers.py",
+        "state.py": "frontend/utils/state.py",
+        "style.css": "frontend/assets/style.css"
+    }
+    
+    # محاولة قراءة الملف الفعلي
+    if filename in file_paths:
+        file_path = os.path.join(ROOT_DIR, file_paths[filename])
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            except Exception:
+                pass
+    
+    # محتوى افتراضي للملفات غير الموجودة
+    default_content = {
+        "app.py": """# app.py - الملف الرئيسي للتطبيق
+import streamlit as st
+
+st.title("🚀 الماسح الضوئي للأسهم")
+""",
+        "config.py": """# config.py - الإعدادات المركزية
+DEFAULT_SETTINGS = {
+    'min_score': 70,
+    'min_prob': 55
+}
+""",
+        "requirements.txt": """streamlit>=1.28.0
+pandas>=2.0.0
+yfinance>=0.2.0
+plotly>=5.14.0
+""",
+        "README.md": "# الماسح الضوئي للأسهم\n\nتطبيق لمسح الأسهم الأمريكية."
+    }
+    
+    return default_content.get(filename, f"# 📝 الملف: {filename}\n\nالمحتوى غير متوفر")
