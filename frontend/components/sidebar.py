@@ -1,19 +1,19 @@
 # frontend/components/sidebar.py
 """
-مكون الشريط الجانبي - منع إعادة التحميل
+مكون الشريط الجانبي - تم إزالة مستكشف الملفات
 """
 
 import streamlit as st
 from datetime import datetime
 
 def render_sidebar():
-    """عرض الشريط الجانبي - بدون إعادة تحميل"""
+    """عرض الشريط الجانبي"""
     with st.sidebar:
         st.image("https://img.icons8.com/fluency/96/stock.png", width=80)
         st.title("🚀 الماسح الضوئي")
         st.markdown("---")
         
-        # القائمة الرئيسية - بدون إعادة تحميل
+        # القائمة الرئيسية - بدون مستكشف الملفات
         render_main_menu()
         
         st.markdown("---")
@@ -29,11 +29,10 @@ def render_sidebar():
         return st.session_state.get('sidebar_config', {})
 
 def render_main_menu():
-    """عرض القائمة الرئيسية - بدون إعادة تحميل"""
+    """عرض القائمة الرئيسية - تم إزالة مستكشف الملفات"""
     pages = {
         "📊 لوحة التحكم": "dashboard",
         "🔍 مسح السوق": "scanner",
-        "📂 مستكشف الملفات": "files",
         "📈 تحليل سهم": "analyze"
     }
     
@@ -46,23 +45,20 @@ def render_main_menu():
             current_index = i
             break
     
-    # استخدام radio مع on_change لمنع إعادة التحميل
     selected = st.radio(
         "القائمة", 
         list(pages.keys()), 
         index=current_index,
         key="main_menu_radio",
-        on_change=None  # منع أي إجراء إضافي
+        on_change=None
     )
     
-    # تحديث الصفحة فقط إذا تغيرت
     new_page = pages[selected]
     if new_page != current_page:
         st.session_state.current_page = new_page
-        # لا نستخدم st.rerun() هنا
 
 def render_scan_settings():
-    """عرض إعدادات المسح - بدون إعادة تحميل"""
+    """عرض إعدادات المسح"""
     st.subheader("⚙️ إعدادات المسح")
     
     # التأكد من وجود sidebar_config
@@ -71,7 +67,6 @@ def render_scan_settings():
     
     config = st.session_state.sidebar_config
     
-    # استخدام القيم مع on_change=None لمنع إعادة التحميل
     min_score = st.slider(
         "🎯 درجة الجاهزية", 
         50, 95, 
@@ -111,7 +106,6 @@ def render_scan_settings():
         on_change=None
     )
     
-    # زر المسح - بدون إعادة تحميل
     scan_clicked = st.button(
         "🔍 ابدأ المسح", 
         width="stretch",
@@ -119,7 +113,7 @@ def render_scan_settings():
         key="scan_button"
     )
     
-    # تحديث الإعدادات في session_state (بدون إعادة تحميل)
+    # تحديث الإعدادات في session_state
     st.session_state.sidebar_config = {
         'min_score': min_score,
         'min_prob': min_prob,
@@ -133,3 +127,4 @@ def render_system_info():
     if st.session_state.get('last_scan_time'):
         st.caption(f"⏱️ آخر مسح: {st.session_state.last_scan_time}")
     st.caption(f"🕐 {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    st.caption("💡 اضبط الإعدادات ثم اضغط 'ابدأ المسح'")
