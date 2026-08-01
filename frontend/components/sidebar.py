@@ -1,6 +1,6 @@
 # frontend/components/sidebar.py
 """
-مكون الشريط الجانبي - تم إصلاح مشكلة إعادة التحميل
+مكون الشريط الجانبي - تم إصلاح مشكلة NoneType
 """
 
 import streamlit as st
@@ -13,7 +13,7 @@ def render_sidebar():
         st.title("🚀 الماسح الضوئي")
         st.markdown("---")
         
-        # القائمة الرئيسية - بدون إعادة تحميل عند التغيير
+        # القائمة الرئيسية
         render_main_menu()
         
         st.markdown("---")
@@ -29,7 +29,7 @@ def render_sidebar():
         return st.session_state.get('sidebar_config', {})
 
 def render_main_menu():
-    """عرض القائمة الرئيسية - بدون إعادة تحميل"""
+    """عرض القائمة الرئيسية"""
     pages = {
         "📊 لوحة التحكم": "dashboard",
         "🔍 مسح السوق": "scanner",
@@ -37,7 +37,6 @@ def render_main_menu():
         "📈 تحليل سهم": "analyze"
     }
     
-    # استخدام session_state للحفاظ على القيمة المختارة
     current_page = st.session_state.get('current_page', 'dashboard')
     
     # العثور على الفهرس الحالي
@@ -54,35 +53,42 @@ def render_main_menu():
         key="main_menu_radio"
     )
     
-    # تحديث الصفحة فقط إذا تغيرت
     new_page = pages[selected]
     if new_page != current_page:
         st.session_state.current_page = new_page
-        # لا نستخدم st.rerun() هنا
 
 def render_scan_settings():
-    """عرض إعدادات المسح"""
+    """عرض إعدادات المسح - مع التحقق من None"""
     st.subheader("⚙️ إعدادات المسح")
     
-    # استخدام القيم المخزنة أو الافتراضية
-    config = st.session_state.get('sidebar_config', {})
+    # التأكد من وجود sidebar_config
+    if 'sidebar_config' not in st.session_state:
+        st.session_state.sidebar_config = {}
     
+    config = st.session_state.sidebar_config
+    
+    # استخدام .get() مع قيمة افتراضية آمنة
     min_score = st.slider(
         "🎯 درجة الجاهزية", 
         50, 95, 
-        config.get('min_score', 70),
+        config.get('min_score', 70) if config else 70,
         key="min_score_slider"
     )
     
     min_prob = st.slider(
         "📊 احتمالية الانفجار", 
         30, 90, 
-        config.get('min_prob', 55),
+        config.get('min_prob', 55) if config else 55,
         key="min_prob_slider"
     )
     
     sectors = ["الكل", "التكنولوجيا", "المالية", "الرعاية الصحية", "الاستهلاك", "الطاقة"]
-    current_sector = config.get('sector') or 'الكل'
+    
+    # الحصول على القطاع الحالي بأمان
+    current_sector = config.get('sector', 'الكل') if config else 'الكل'
+    if current_sector is None:
+        current_sector = 'الكل'
+    
     sector_index = sectors.index(current_sector) if current_sector in sectors else 0
     
     sector = st.selectbox(
@@ -95,11 +101,10 @@ def render_scan_settings():
     max_symbols = st.slider(
         "📈 عدد الأسهم للمسح",
         5, 30, 
-        config.get('max_symbols', 15),
+        config.get('max_symbols', 15) if config else 15,
         key="max_symbols"
     )
     
-    # زر المسح - بدون إعادة تحميل
     scan_clicked = st.button(
         "🔍 ابدأ المسح", 
         width="stretch",
