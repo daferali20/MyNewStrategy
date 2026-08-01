@@ -3,18 +3,32 @@
 أدوات مساعدة للواجهة الأمامية
 """
 
+# استيرادات بسيطة لتجنب الدائرية
 from .helpers import (
-    init_session_state,
-    get_file_content,
-    get_sample_data,
+    load_css,
+    load_inline_css,
     format_currency,
-    FILE_STRUCTURE
+    format_percentage,
+    format_number,
+    format_datetime,
+    format_volume,
+    get_sample_data,
+    get_sample_analysis,
+    is_valid_symbol
 )
 
+# استيرادات البيانات - يتم استيرادها عند الحاجة
+# لتجنب الدائرية، نستوردها بشكل منفصل
+
 __all__ = [
-    'init_session_state',
-    'get_file_content',
-    'get_sample_data',
+    'load_css',
+    'load_inline_css',
     'format_currency',
-    'FILE_STRUCTURE'
+    'format_percentage',
+    'format_number',
+    'format_datetime',
+    'format_volume',
+    'get_sample_data',
+    'get_sample_analysis',
+    'is_valid_symbol'
 ]
