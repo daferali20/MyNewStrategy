@@ -1,153 +1,148 @@
 # frontend/components/sidebar.py
 """
-مكون الشريط الجانبي - مصحح ومحمي ضد حلقات التكرار
+مكون الشريط الجانبي (Sidebar Component)
+يدير أدوات التنقل بين الصفحات وإعدادات معايير المسح الضوئي.
 """
 
 import streamlit as st
-from datetime import datetime
+
+# استيراد الإعدادات الافتراضية بأمان
+try:
+    from config import DEFAULT_SETTINGS
+except ImportError:
+    DEFAULT_SETTINGS = {
+        'min_score': 70,
+        'min_prob': 55,
+        'max_symbols': 15,
+        'sector': 'الكل'
+    }
 
 def render_sidebar():
+    """
+    رسم وتصميم الشريط الجانبي وإدارة خيارات المسح والتنقل.
+    
+    :return: dict يحتوي على إعدادات المسح الحالية ونقر زر المسح.
+    """
     with st.sidebar:
-        st.title("📍 التنقل الرئيسي")
+        st.markdown("""
+        <div style="text-align: center; padding: 0.5rem 0 1rem 0;">
+            <h2 style="margin:0; color:#667eea;">📊 خيارات التحكم</h2>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # التأكد من وجود قيمة افتراضية متطابقة
+        # ====================================================================
+        # 1. قائمة التنقل بين الصفحات (Navigation Menu)
+        # ====================================================================
+        st.subheader("📍 التنقل الرئيسي")
+        
+        # التأكد من وجود قيمة افتراضية للصفحة الحالية
         if 'current_page' not in st.session_state:
             st.session_state['current_page'] = 'dashboard'
+            
+        pages_map = {
+            'dashboard': '📊 لوحة التحكم',
+            'scanner': '🔍 المسح الضوئي',
+            'analyze': '🔬 التحليل التفصيلي'
+        }
+        
+        pages_keys = list(pages_map.keys())
+        current_page = st.session_state.get('current_page', 'dashboard')
+        
+        # تحديد الفهرس الحالي بأمان
+        default_index = pages_keys.index(current_page) if current_page in pages_keys else 0
 
-        # القائمة المربوطة بـ key='nav_radio'
+        # خيار التنقل عبر Radio Button المربوط بمفتاح 'nav_radio'
         selected_page = st.radio(
             "اختر الصفحة:",
-            options=['dashboard', 'scanner', 'analyze'],
-            format_func=lambda x: {
-                'dashboard': '📊 لوحة التحكم',
-                'scanner': '🔍 المسح الضوئي',
-                'analyze': '🔬 التحليل التفصيلي'
-            }.get(x, x),
-            key='nav_radio',
-            index=['dashboard', 'scanner', 'analyze'].index(st.session_state.get('current_page', 'dashboard'))
+            options=pages_keys,
+            format_func=lambda x: pages_map.get(x, x),
+            index=default_index,
+            key='nav_radio'
         )
 
-        # تحديث الجلسة في حال تم تغيير الراديو يدوياً بواسطة المستخدم
+        # التزامن العكسي: إذا قام المستخدم بالتغيير من الشريط الجانبي يدوياً
         if selected_page != st.session_state.get('current_page'):
             st.session_state['current_page'] = selected_page
             st.rerun()
-def render_sidebar():
-    """عرض الشريط الجانبي"""
-    with st.sidebar:
-        # 1. الشعار والعنوان
-        try:
-            st.image("https://img.icons8.com/fluency/96/stock.png", width=80)
-        except Exception:
-            pass
-            
-        st.title("🚀 الماسح الضوئي")
-        st.markdown("---")
-        
-        # 2. القائمة الرئيسية (التنقل)
-        render_main_menu()
-        
-        st.markdown("---")
-        
-        # 3. إعدادات المسح
-        render_scan_settings()
-        
-        st.markdown("---")
-        
-        # 4. معلومات النظام
-        render_system_info()
-        
-        return st.session_state.get('sidebar_config', {})
 
-def render_main_menu():
-    """عرض القائمة الرئيسية بشكل متوافق ومستقر"""
-    pages = {
-        "📊 لوحة التحكم": "dashboard",
-        "🔍 مسح السوق": "scanner",
-        "📈 تحليل سهم": "analyze"
-    }
-    
-    current_page = st.session_state.get('current_page', 'dashboard')
-    
-    # تحديد الفهرس الحالي لزر الراديو
-    page_keys = list(pages.keys())
-    page_values = list(pages.values())
-    
-    current_index = page_values.index(current_page) if current_page in page_values else 0
-    
-    selected_label = st.radio(
-        "الانتقال إلى:", 
-        page_keys, 
-        index=current_index,
-        key="main_menu_radio"
-    )
-    
-    # تحديث الصفحة المختارة فقط إذا تغيرت عن الصفحة الحالية
-    selected_page = pages[selected_label]
-    if st.session_state.get('current_page') != selected_page:
-        st.session_state.current_page = selected_page
-        st.rerun()
+        st.markdown("---")
 
-def render_scan_settings():
-    """عرض إعدادات المسح وتحفيز العمليات"""
-    st.subheader("⚙️ إعدادات المسح")
-    
-    if 'sidebar_config' not in st.session_state:
-        st.session_state.sidebar_config = {}
+        # ====================================================================
+        # 2. إعدادات ومعايير البحث/المسح (Scan Settings)
+        # ====================================================================
+        st.subheader("⚙️ إعدادات المسح")
+
+        # اختيار القطاع
+        sectors = ['الكل', 'التكنولوجيا', 'الرعاية الصحية', 'الخدمات المالية', 'الطاقة', 'الصناعة']
+        selected_sector = st.selectbox(
+            "القطاع المستهدف:",
+            options=sectors,
+            index=0,
+            key='sidebar_sector'
+        )
+
+        # الحد الأدنى لدرجة الضغط (Squeeze Score)
+        min_score = st.slider(
+            "الحد الأدنى لدرجة الجاهزية (Score):",
+            min_value=50,
+            max_value=95,
+            value=DEFAULT_SETTINGS.get('min_score', 70),
+            step=5,
+            key='sidebar_min_score'
+        )
+
+        # الحد الأدنى للاحتمالية (Probability)
+        min_prob = st.slider(
+            "الحد الأدنى للاحتمالية (%):",
+            min_value=40,
+            max_value=90,
+            value=DEFAULT_SETTINGS.get('min_prob', 55),
+            step=5,
+            key='sidebar_min_prob'
+        )
+
+        # عدد الأسهم المستهدفة
+        max_symbols = st.number_input(
+            "أقصى عدد للأسهم:",
+            min_value=5,
+            max_value=50,
+            value=DEFAULT_SETTINGS.get('max_symbols', 15),
+            step=5,
+            key='sidebar_max_symbols'
+        )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # ====================================================================
+        # 3. زر بدء المسح الضوئي (Scan Trigger Button)
+        # ====================================================================
+        scan_clicked = st.button(
+            "🚀 بدء المسح الضوئي الان",
+            type="primary",
+            use_container_width=True,
+            key='btn_start_scan_sidebar'
+        )
+
+        # معالجة النقر على الزر
+        if scan_clicked:
+            # توجيه تلقائي لصفحة المسح الضوئي
+            st.session_state['current_page'] = 'scanner'
+            st.session_state['nav_radio'] = 'scanner'
+
+        # تجميع وحفظ الإعدادات في الجلسة لاستخدامها في app.py
+        config = {
+            'sector': selected_sector,
+            'min_score': min_score,
+            'min_prob': min_prob,
+            'max_symbols': max_symbols,
+            'scan_clicked': scan_clicked
+        }
         
-    config = st.session_state.sidebar_config
-    
-    min_score = st.slider(
-        "🎯 درجة الجاهزية", 
-        50, 95, 
-        config.get('min_score', 70),
-        key="min_score_slider"
-    )
-    
-    min_prob = st.slider(
-        "📊 احتمالية الانفجار", 
-        30, 90, 
-        config.get('min_prob', 55),
-        key="min_prob_slider"
-    )
-    
-    sectors = ["الكل", "التكنولوجيا", "المالية", "الرعاية الصحية", "الاستهلاك", "الطاقة"]
-    current_sector = config.get('sector') or "الكل"
-    sector_index = sectors.index(current_sector) if current_sector in sectors else 0
-    
-    sector = st.selectbox(
-        "🏢 القطاع", 
-        sectors,
-        index=sector_index,
-        key="sector_select"
-    )
-    
-    max_symbols = st.slider(
-        "📈 عدد الأسهم للمسح",
-        5, 30, 
-        config.get('max_symbols', 15),
-        key="max_symbols_slider"
-    )
-    
-    # زر تشغيل المسح بتوافقية عالية للأبعاد
-    try:
-        scan_clicked = st.button("🔍 ابدأ المسح", type="primary", key="scan_button", width="stretch")
-    except TypeError:
-        scan_clicked = st.button("🔍 ابدأ المسح", type="primary", key="scan_button", use_container_width=True)
-    
-    # احتفاظ بالحالة السابقة لـ scan_clicked إذا لم يتم الضغط حالياً
-    prev_clicked = st.session_state.sidebar_config.get('scan_clicked', False)
-    
-    st.session_state.sidebar_config = {
-        'min_score': min_score,
-        'min_prob': min_prob,
-        'sector': None if sector == "الكل" else sector,
-        'max_symbols': max_symbols,
-        'scan_clicked': scan_clicked or prev_clicked
-    }
+        st.session_state['sidebar_config'] = config
 
-def render_system_info():
-    """عرض معلومات النظام والتوقيت"""
-    if st.session_state.get('last_scan_time'):
-        st.caption(f"⏱️ آخر مسح: {st.session_state.last_scan_time}")
-    st.caption(f"🕐 {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    st.caption("💡 اضبط الإعدادات ثم اضغط 'ابدأ المسح'")
+        # معلومات سريعة عن الجلسة
+        st.markdown("---")
+        if st.session_state.get('last_scan_time'):
+            st.caption(f"⏱️ آخر مسح: {st.session_state.last_scan_time}")
+
+        return config
