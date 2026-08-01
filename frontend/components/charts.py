@@ -6,8 +6,7 @@
 import plotly.graph_objects as go
 
 def create_candlestick_chart(df, symbol, entry_points=None):
-    """إنشاء رسم بياني للشموع اليابانية"""
-    
+    """إنشاء رسم بياني للشموع"""
     fig = go.Figure()
     
     # الشموع
@@ -17,58 +16,63 @@ def create_candlestick_chart(df, symbol, entry_points=None):
         high=df['High'],
         low=df['Low'],
         close=df['Close'],
-        name="السعر"
+        name="السعر",
+        increasing=dict(line=dict(color='#00E676')),
+        decreasing=dict(line=dict(color='#FF5252'))
     ))
     
     # المتوسطات المتحركة
     if len(df) > 20:
-        ma20 = df['Close'].rolling(window=20).mean()
-        ma50 = df['Close'].rolling(window=50).mean() if len(df) > 50 else None
-        
+        ma20 = df['Close'].rolling(20).mean()
         fig.add_trace(go.Scatter(
             x=df.index, y=ma20,
-            line=dict(color='#FFD700', width=1.5),
-            name="MA20"
+            line=dict(color='#FFD700', width=1.2),
+            name="MA20",
+            opacity=0.7
         ))
-        
-        if ma50 is not None:
-            fig.add_trace(go.Scatter(
-                x=df.index, y=ma50,
-                line=dict(color='#FF6B6B', width=1.5),
-                name="MA50"
-            ))
+    
+    if len(df) > 50:
+        ma50 = df['Close'].rolling(50).mean()
+        fig.add_trace(go.Scatter(
+            x=df.index, y=ma50,
+            line=dict(color='#29B6F6', width=1.2),
+            name="MA50",
+            opacity=0.7
+        ))
     
     # مستويات الدخول والخروج
     if entry_points:
-        levels = [
-            ('entry_point', '#00E676', 'نقطة الدخول', 'top right'),
-            ('stop_loss', '#FF5252', 'وقف الخسارة', 'bottom right'),
-            ('target_1', '#29B6F6', 'الهدف 1', 'top left'),
-            ('target_2', '#AB47BC', 'الهدف 2', 'bottom left')
-        ]
-        
-        for key, color, label, position in levels:
-            if key in entry_points and entry_points[key]:
-                fig.add_hline(
-                    y=entry_points[key],
-                    line_dash="dash",
-                    line_color=color,
-                    annotation_text=label,
-                    annotation_position=position
-                )
+        add_levels(fig, entry_points)
     
-    # تنسيق الرسم
     fig.update_layout(
-        title=f"📈 {symbol} - رسم بياني فني",
+        title=f"📈 {symbol} - تحليل فني",
         template="plotly_dark",
         xaxis_rangeslider_visible=False,
         height=500,
         margin=dict(l=20, r=20, t=50, b=20),
-        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        hovermode='x unified'
     )
     
     return fig
 
+def add_levels(fig, entry_points):
+    """إضافة مستويات الدخول والخروج"""
+    levels = [
+        ('entry_point', '#00E676', 'نقطة الدخول', 'top right'),
+        ('stop_loss', '#FF5252', 'وقف الخسارة', 'bottom right'),
+        ('target_1', '#29B6F6', 'الهدف 1', 'top left'),
+        ('target_2', '#AB47BC', 'الهدف 2', 'bottom left')
+    ]
+    for key, color, label, position in levels:
+        if key in entry_points and entry_points[key]:
+            fig.add_hline(
+                y=entry_points[key],
+                line_dash="dash",
+                line_color=color,
+                annotation_text=label,
+                annotation_position=position
+            )
 
 def create_score_gauge(score, title="الدرجة"):
     """إنشاء مقياس للدرجة"""
@@ -84,14 +88,8 @@ def create_score_gauge(score, title="الدرجة"):
                 {'range': [0, 33], 'color': "rgba(255, 82, 82, 0.3)"},
                 {'range': [33, 66], 'color': "rgba(255, 193, 7, 0.3)"},
                 {'range': [66, 100], 'color': "rgba(0, 230, 118, 0.3)"}
-            ],
-            'threshold': {
-                'line': {'color': "white", 'width': 4},
-                'thickness': 0.75,
-                'value': score
-            }
+            ]
         }
     ))
-    
     fig.update_layout(height=250)
     return fig
