@@ -1,18 +1,19 @@
 # frontend/utils/helpers.py
 """
-دوال مساعدة للتطبيق - النسخة النهائية مع جميع الدوال
+دوال مساعدة للتطبيق - النسخة المحدثة والمحصنة بالكامل
 """
 
-import pandas as pd
-import streamlit as st
 import os
 from datetime import datetime
+import pandas as pd
+import streamlit as st
 
 # ============================================================================
 # إعدادات المسارات
 # ============================================================================
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# تحديد المجلد الرئيسي للمشروع بدقة
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 # ============================================================================
 # دوال التصميم (CSS)
@@ -32,95 +33,73 @@ def load_css():
         load_inline_css()
 
 def load_inline_css():
-    """تصميم مضمن في حال عدم وجود الملف"""
+    """تصميم مضمن احتياطي في حال تعذر فتح الملف"""
     st.markdown("""
     <style>
     .main-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 35px 40px;
+        padding: 30px 35px;
         border-radius: 20px;
         color: white;
-        margin-bottom: 30px;
-        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-        transform: perspective(1000px) rotateX(2deg) rotateY(-2deg);
-        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .main-header:hover {
-        transform: perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1.02);
-        box-shadow: 0 30px 60px -12px rgba(0,0,0,0.6), 0 0 40px rgba(102,126,234,0.3);
+        margin-bottom: 25px;
+        box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
     }
     [data-testid="stSidebar"] {
-        background: rgba(26, 26, 46, 0.92) !important;
+        background: rgba(26, 26, 46, 0.95) !important;
         backdrop-filter: blur(20px);
-        border-right: 1px solid rgba(255,255,255,0.05);
-        box-shadow: 10px 0 40px rgba(0,0,0,0.3);
+        border-right: 1px solid rgba(255,255,255,0.08);
     }
     .metric-card {
         background: rgba(255,255,255,0.05);
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255,255,255,0.1);
-        padding: 25px;
+        padding: 20px;
         border-radius: 16px;
         text-align: center;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        transform: perspective(800px) rotateX(0deg) rotateY(0deg);
-        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.3);
-    }
-    .metric-card:hover {
-        transform: perspective(800px) rotateX(5deg) rotateY(5deg) translateY(-10px);
-        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-        border-color: rgba(102,126,234,0.3);
-    }
-    .metric-card .icon { font-size: 2.5rem; margin-bottom: 10px; }
-    .metric-card .value { font-size: 2rem; font-weight: bold; color: white; }
-    .metric-card .label { color: #888; font-size: 0.9rem; margin-top: 5px; }
-    .stock-card {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        padding: 20px;
-        border-radius: 12px;
-        border-right: 4px solid #667eea;
-        margin: 10px 0;
-        transition: all 0.3s ease;
-    }
-    .stock-card:hover {
-        transform: translateX(5px);
-        box-shadow: 0 5px 20px rgba(102,126,234,0.2);
     }
     </style>
     """, unsafe_allow_html=True)
 
 # ============================================================================
-# دوال التنسيق
+# دوال التنسيق المالي والعددي
 # ============================================================================
 
 def format_currency(value):
-    """تنسيق القيمة كعملة دولار"""
-    if value is None or value == 0:
+    """تنسيق القيمة كعملة دولار أمريكي"""
+    if value is None or value == "":
         return "$0.00"
-    return f"${value:,.2f}"
+    try:
+        val = float(value)
+        return f"${val:,.2f}"
+    except (ValueError, TypeError):
+        return "$0.00"
 
 def format_percentage(value):
     """تنسيق النسبة المئوية"""
-    if value is None:
-        return "0%"
-    return f"{value:.1f}%"
+    if value is None or value == "":
+        return "0.0%"
+    try:
+        val = float(value)
+        return f"{val:.1f}%"
+    except (ValueError, TypeError):
+        return "0.0%"
 
 def format_number(value):
-    """تنسيق الأرقام الكبيرة (K, M)"""
-    if value is None:
+    """تنسيق الأرقام الكبيرة (K, M, B)"""
+    if value is None or value == "":
         return "0"
     
     try:
-        value = float(value)
-        if value >= 1_000_000_000:
-            return f"{value/1_000_000_000:.2f}B"
-        elif value >= 1_000_000:
-            return f"{value/1_000_000:.2f}M"
-        elif value >= 1_000:
-            return f"{value/1_000:.2f}K"
+        val = float(value)
+        if abs(val) >= 1_000_000_000:
+            return f"{val/1_000_000_000:.2f}B"
+        elif abs(val) >= 1_000_000:
+            return f"{val/1_000_000:.2f}M"
+        elif abs(val) >= 1_000:
+            return f"{val/1_000:.2f}K"
         else:
-            return f"{value:.2f}"
-    except:
+            return f"{val:.2f}"
+    except (ValueError, TypeError):
         return str(value)
 
 def format_datetime(dt):
@@ -129,90 +108,84 @@ def format_datetime(dt):
         return ""
     if isinstance(dt, str):
         return dt
-    return dt.strftime("%Y-%m-%d %H:%M")
+    try:
+        return dt.strftime("%Y-%m-%d %H:%M")
+    except AttributeError:
+        return str(dt)
 
 def format_volume(volume):
     """تنسيق حجم التداول"""
-    if volume is None or volume == 0:
+    if volume is None or volume == "":
         return "0"
     
     try:
-        volume = float(volume)
-        if volume >= 1_000_000_000:
-            return f"{volume/1_000_000_000:.1f}B"
-        elif volume >= 1_000_000:
-            return f"{volume/1_000_000:.1f}M"
-        elif volume >= 1_000:
-            return f"{volume/1_000:.1f}K"
+        val = float(volume)
+        if val >= 1_000_000_000:
+            return f"{val/1_000_000_000:.1f}B"
+        elif val >= 1_000_000:
+            return f"{val/1_000_000:.1f}M"
+        elif val >= 1_000:
+            return f"{val/1_000:.1f}K"
         else:
-            return f"{volume:.0f}"
-    except:
+            return f"{val:.0f}"
+    except (ValueError, TypeError):
         return str(volume)
 
 # ============================================================================
-# دوال جلب البيانات مع التخزين المؤقت (الأسماء المطلوبة)
+# دوال جلب البيانات مع التخزين المؤقت (Cached Functions)
 # ============================================================================
 
 @st.cache_data(ttl=300, show_spinner=False)
-def get_stock_data_cached(symbol, period="6mo"):
+def get_stock_data_cached(symbol: str, period: str = "6mo") -> pd.DataFrame:
     """
-    جلب بيانات السهم مع التخزين المؤقت لمدة 5 دقائق
-    
-    Args:
-        symbol: رمز السهم (مثل AAPL)
-        period: الفترة الزمنية (1mo, 3mo, 6mo, 1y, 2y)
-    
-    Returns:
-        DataFrame ببيانات OHLCV
+    جلب بيانات السهم التاريخية مع التخزين المؤقت لمدة 5 دقائق
     """
+    if not is_valid_symbol(symbol):
+        return pd.DataFrame()
+
     try:
         import yfinance as yf
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol.upper().strip())
         df = ticker.history(period=period)
         
-        if df.empty:
+        if df is None or df.empty:
             return pd.DataFrame()
-        
+            
         return df
     except Exception as e:
         print(f"⚠️ خطأ في جلب بيانات {symbol}: {e}")
         return pd.DataFrame()
 
 @st.cache_data(ttl=600, show_spinner=False)
-def get_stock_info_cached(symbol):
+def get_stock_info_cached(symbol: str) -> dict:
     """
-    جلب معلومات الشركة مع التخزين المؤقت لمدة 10 دقائق
-    
-    Args:
-        symbol: رمز السهم
-    
-    Returns:
-        قاموس بمعلومات الشركة
+    جلب معلومات الشركة الأساسية مع التخزين المؤقت لمدة 10 دقائق
     """
+    if not is_valid_symbol(symbol):
+        return {}
+
     try:
         import yfinance as yf
-        ticker = yf.Ticker(symbol)
+        ticker = yf.Ticker(symbol.upper().strip())
         info = ticker.info
-        return info if info else {}
+        return info if isinstance(info, dict) else {}
     except Exception as e:
         print(f"⚠️ خطأ في جلب معلومات {symbol}: {e}")
         return {}
 
-# أسماء بديلة للتوافق مع الإصدارات السابقة
+# أسماء بديلة للتوافق السلس مع الموديولات الأُخرى
 def get_stock_data(symbol, period="6mo"):
-    """اسم بديل لـ get_stock_data_cached"""
     return get_stock_data_cached(symbol, period)
 
 def get_stock_info(symbol):
-    """اسم بديل لـ get_stock_info_cached"""
     return get_stock_info_cached(symbol)
 
 # ============================================================================
-# دوال البيانات النموذجية
+# دوال البيانات النموذجية والتحقق
 # ============================================================================
 
-def get_sample_data():
-    """الحصول على بيانات نموذجية للعرض"""
+def get_sample_data() -> pd.DataFrame:
+    """الحصول على بيانات نموذجية لعرض الاختبارات"""
     return pd.DataFrame({
         'symbol': ['NVDA', 'AMD', 'AAPL', 'MSFT', 'TSLA'],
         'name': ['NVIDIA Corp', 'AMD Corp', 'Apple Inc', 'Microsoft', 'Tesla Inc'],
@@ -223,8 +196,8 @@ def get_sample_data():
         'risk_level': ['منخفض', 'متوسط', 'منخفض', 'متوسط', 'مرتفع']
     })
 
-def get_sample_analysis():
-    """الحصول على تحليل نموذجي لعرضه"""
+def get_sample_analysis() -> dict:
+    """الحصول على تحليل نموذجي لعرضه عند عدم جلب بيانات"""
     return {
         'squeeze_score': 85,
         'breakout_probability': 72,
@@ -246,82 +219,63 @@ def get_sample_analysis():
         }
     }
 
-def is_valid_symbol(symbol):
+def is_valid_symbol(symbol: str) -> bool:
     """التحقق من صحة رمز السهم"""
     if not symbol or not isinstance(symbol, str):
         return False
     
-    symbol = symbol.upper().strip()
-    if len(symbol) < 1 or len(symbol) > 5:
+    clean_sym = symbol.upper().strip()
+    if len(clean_sym) < 1 or len(clean_sym) > 6:
         return False
     
-    return symbol.isalnum()
+    return clean_sym.isalnum()
 
 # ============================================================================
-# دوال الملفات
+# دوال إدارة وقراءة الملفات
 # ============================================================================
 
-def get_file_content(filename):
+def get_file_content(filename: str) -> str:
     """
-    جلب محتوى ملف من المشروع
-    
-    Args:
-        filename: اسم الملف
-    
-    Returns:
-        محتوى الملف كنص
+    جلب محتوى ملف نصي من المشروع بشكل آمن
     """
-    # خريطة الملفات الفعلية
     file_paths = {
         "app.py": "app.py",
         "config.py": "config.py",
         "requirements.txt": "requirements.txt",
         "README.md": "README.md",
-        "breakout_scanner.py": "backend/scanner/breakout_scanner.py",
-        "screener.py": "backend/scanner/screener.py",
-        "ai_breakout_analyzer.py": "backend/scanner/ai_breakout_analyzer.py",
-        "__init__.py": "backend/scanner/__init__.py",
-        "sidebar.py": "frontend/components/sidebar.py",
-        "charts.py": "frontend/components/charts.py",
-        "cards.py": "frontend/components/cards.py",
-        "dashboard.py": "frontend/pages/dashboard.py",
-        "scanner.py": "frontend/pages/scanner.py",
-        "file_explorer.py": "frontend/pages/file_explorer.py",
-        "analyze.py": "frontend/pages/analyze.py",
-        "helpers.py": "frontend/utils/helpers.py",
-        "state.py": "frontend/utils/state.py",
-        "style.css": "frontend/assets/style.css"
+        "breakout_scanner.py": os.path.join("backend", "scanner", "breakout_scanner.py"),
+        "screener.py": os.path.join("backend", "scanner", "screener.py"),
+        "ai_breakout_analyzer.py": os.path.join("backend", "scanner", "ai_breakout_analyzer.py"),
+        "__init__.py": os.path.join("backend", "scanner", "__init__.py"),
+        "sidebar.py": os.path.join("frontend", "components", "sidebar.py"),
+        "charts.py": os.path.join("frontend", "components", "charts.py"),
+        "cards.py": os.path.join("frontend", "components", "cards.py"),
+        "dashboard.py": os.path.join("frontend", "pages", "dashboard.py"),
+        "scanner.py": os.path.join("frontend", "pages", "scanner.py"),
+        "file_explorer.py": os.path.join("frontend", "pages", "file_explorer.py"),
+        "analyze.py": os.path.join("frontend", "pages", "analyze.py"),
+        "helpers.py": os.path.join("frontend", "utils", "helpers.py"),
+        "state.py": os.path.join("frontend", "utils", "state.py"),
+        "style.css": os.path.join("frontend", "assets", "style.css")
     }
     
-    # محاولة قراءة الملف الفعلي
+    # 1. البحث باستخدام الخريطة المعرفة
     if filename in file_paths:
-        file_path = os.path.join(ROOT_DIR, file_paths[filename])
-        if os.path.exists(file_path):
+        target_path = os.path.join(ROOT_DIR, file_paths[filename])
+        if os.path.exists(target_path):
             try:
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(target_path, 'r', encoding='utf-8') as f:
                     return f.read()
-            except Exception:
-                pass
+            except Exception as e:
+                return f"# ⚠️ متعذر قراءة الملف {filename}: {str(e)}"
     
-    # محتوى افتراضي للملفات غير الموجودة
-    default_content = {
-        "app.py": """# app.py - الملف الرئيسي للتطبيق
-import streamlit as st
+    # 2. البحث عن الملف داخل كامل المجلد ديناميكياً
+    for root, _, files in os.walk(ROOT_DIR):
+        if filename in files:
+            try:
+                with open(os.path.join(root, filename), 'r', encoding='utf-8') as f:
+                    return f.read()
+            except Exception as e:
+                return f"# ⚠️ متعذر قراءة الملف: {str(e)}"
 
-st.title("🚀 الماسح الضوئي للأسهم")
-""",
-        "config.py": """# config.py - الإعدادات المركزية
-DEFAULT_SETTINGS = {
-    'min_score': 70,
-    'min_prob': 55
-}
-""",
-        "requirements.txt": """streamlit>=1.28.0
-pandas>=2.0.0
-yfinance>=0.2.0
-plotly>=5.14.0
-""",
-        "README.md": "# الماسح الضوئي للأسهم\n\nتطبيق لمسح الأسهم الأمريكية."
-    }
-    
-    return default_content.get(filename, f"# 📝 الملف: {filename}\n\nالمحتوى غير متوفر")
+    return f"# 📝 الملف ({filename}) غير موجود بمسارات المشروع."
