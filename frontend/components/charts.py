@@ -1,6 +1,6 @@
 # frontend/components/charts.py
 """
-مكونات الرسوم البيانية
+مكونات الرسوم البيانية - تم إصلاح use_container_width
 """
 
 import plotly.graph_objects as go
@@ -50,7 +50,13 @@ def create_candlestick_chart(df, symbol, entry_points=None):
         xaxis_rangeslider_visible=False,
         height=500,
         margin=dict(l=20, r=20, t=50, b=20),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
         hovermode='x unified'
     )
     
