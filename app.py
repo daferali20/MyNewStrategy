@@ -28,6 +28,59 @@ if ROOT_DIR not in sys.path:
 # ============================================================================
 # تهيئة حالة الجلسة
 # ============================================================================
+# app.py - الجزء المحدث لإضافة CSS
+
+def load_css():
+    """تحميل ملف التصميم ثلاثي الأبعاد"""
+    css_path = os.path.join(ROOT_DIR, "frontend", "assets", "style.css")
+    if os.path.exists(css_path):
+        with open(css_path, 'r', encoding='utf-8') as f:
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    else:
+        # تصميم مضمن في حال عدم وجود الملف
+        st.markdown("""
+        <style>
+        /* تصميم ثلاثي الأبعاد مباشر */
+        .main-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 35px 40px;
+            border-radius: 20px;
+            color: white;
+            margin-bottom: 30px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            transform: perspective(1000px) rotateX(2deg) rotateY(-2deg);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .main-header:hover {
+            transform: perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1.02);
+            box-shadow: 0 30px 60px -12px rgba(0,0,0,0.6), 0 0 40px rgba(102,126,234,0.3);
+        }
+        [data-testid="stSidebar"] {
+            background: rgba(26, 26, 46, 0.92) !important;
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 10px 0 40px rgba(0,0,0,0.3);
+        }
+        .metric-card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 16px;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: perspective(800px) rotateX(0deg) rotateY(0deg);
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.3);
+        }
+        .metric-card:hover {
+            transform: perspective(800px) rotateX(5deg) rotateY(5deg) translateY(-10px);
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            border-color: rgba(102,126,234,0.3);
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+# في الدالة الرئيسية main()، أضف:
 
 def init_session_state():
     """تهيئة جميع متغيرات الجلسة"""
