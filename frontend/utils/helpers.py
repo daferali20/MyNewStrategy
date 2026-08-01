@@ -1,11 +1,12 @@
 # frontend/utils/helpers.py
 """
-دوال مساعدة للتطبيق - تم إعادة تنظيمها بالكامل
+دوال مساعدة للتطبيق - النسخة النهائية مع جميع الدوال
 """
 
 import pandas as pd
 import streamlit as st
 import os
+from datetime import datetime
 
 # ============================================================================
 # إعدادات المسارات
@@ -149,19 +150,77 @@ def format_volume(volume):
         return str(volume)
 
 # ============================================================================
+# دوال جلب البيانات مع التخزين المؤقت (الأسماء المطلوبة)
+# ============================================================================
+
+@st.cache_data(ttl=300, show_spinner=False)
+def get_stock_data_cached(symbol, period="6mo"):
+    """
+    جلب بيانات السهم مع التخزين المؤقت لمدة 5 دقائق
+    
+    Args:
+        symbol: رمز السهم (مثل AAPL)
+        period: الفترة الزمنية (1mo, 3mo, 6mo, 1y, 2y)
+    
+    Returns:
+        DataFrame ببيانات OHLCV
+    """
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(period=period)
+        
+        if df.empty:
+            return pd.DataFrame()
+        
+        return df
+    except Exception as e:
+        print(f"⚠️ خطأ في جلب بيانات {symbol}: {e}")
+        return pd.DataFrame()
+
+@st.cache_data(ttl=600, show_spinner=False)
+def get_stock_info_cached(symbol):
+    """
+    جلب معلومات الشركة مع التخزين المؤقت لمدة 10 دقائق
+    
+    Args:
+        symbol: رمز السهم
+    
+    Returns:
+        قاموس بمعلومات الشركة
+    """
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker(symbol)
+        info = ticker.info
+        return info if info else {}
+    except Exception as e:
+        print(f"⚠️ خطأ في جلب معلومات {symbol}: {e}")
+        return {}
+
+# أسماء بديلة للتوافق مع الإصدارات السابقة
+def get_stock_data(symbol, period="6mo"):
+    """اسم بديل لـ get_stock_data_cached"""
+    return get_stock_data_cached(symbol, period)
+
+def get_stock_info(symbol):
+    """اسم بديل لـ get_stock_info_cached"""
+    return get_stock_info_cached(symbol)
+
+# ============================================================================
 # دوال البيانات النموذجية
 # ============================================================================
 
 def get_sample_data():
     """الحصول على بيانات نموذجية للعرض"""
     return pd.DataFrame({
-        'الرمز': ['NVDA', 'AMD', 'AAPL', 'MSFT', 'TSLA'],
-        'الشركة': ['NVIDIA Corp', 'AMD Corp', 'Apple Inc', 'Microsoft', 'Tesla Inc'],
-        'القطاع': ['التكنولوجيا', 'التكنولوجيا', 'التكنولوجيا', 'التكنولوجيا', 'السيارات'],
-        'السعر': [895.32, 165.42, 175.34, 378.91, 245.68],
-        'درجة الضغط': [92, 78, 85, 71, 65],
-        'احتمالية الانفجار': [85, 72, 68, 55, 48],
-        'المخاطرة': ['منخفضة', 'متوسطة', 'منخفضة', 'متوسطة', 'مرتفعة']
+        'symbol': ['NVDA', 'AMD', 'AAPL', 'MSFT', 'TSLA'],
+        'name': ['NVIDIA Corp', 'AMD Corp', 'Apple Inc', 'Microsoft', 'Tesla Inc'],
+        'sector': ['التكنولوجيا', 'التكنولوجيا', 'التكنولوجيا', 'التكنولوجيا', 'السيارات'],
+        'current_price': [895.32, 165.42, 175.34, 378.91, 245.68],
+        'squeeze_score': [92, 78, 85, 71, 65],
+        'breakout_probability': [85, 72, 68, 55, 48],
+        'risk_level': ['منخفض', 'متوسط', 'منخفض', 'متوسط', 'مرتفع']
     })
 
 def get_sample_analysis():
@@ -199,30 +258,7 @@ def is_valid_symbol(symbol):
     return symbol.isalnum()
 
 # ============================================================================
-# دوال جلب البيانات (مع استيراد متأخر لتجنب الدائرية)
-# ============================================================================
-
-def get_stock_data(symbol, period="6mo"):
-    """جلب بيانات السهم"""
-    try:
-        import yfinance as yf
-        ticker = yf.Ticker(symbol)
-        df = ticker.history(period=period)
-        return df if not df.empty else pd.DataFrame()
-    except:
-        return pd.DataFrame()
-
-def get_stock_info(symbol):
-    """جلب معلومات الشركة"""
-    try:
-        import yfinance as yf
-        ticker = yf.Ticker(symbol)
-        return ticker.info
-    except:
-        return {}
-
-# ============================================================================
-# دوال الملفات (دوال مستقلة)
+# دوال الملفات
 # ============================================================================
 
 def get_file_content(filename):
