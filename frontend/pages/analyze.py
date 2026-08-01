@@ -1,6 +1,6 @@
 # frontend/pages/analyze.py
 """
-صفحة تحليل السهم
+صفحة تحليل السهم - تم إصلاح use_container_width
 """
 
 import streamlit as st
@@ -87,7 +87,8 @@ def display_chart(df, symbol):
     }
     
     fig = create_candlestick_chart(df, symbol, entry_points)
-    st.plotly_chart(fig, use_container_width=True)
+    # تم التحديث: use_container_width=True → width='stretch'
+    st.plotly_chart(fig, width='stretch')
 
 def display_metrics(df):
     """عرض المؤشرات والمستويات"""
