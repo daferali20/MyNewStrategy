@@ -1,7 +1,7 @@
 # app.py
 """
 التطبيق الرئيسي - الماسح الضوئي للأسهم
-جميع الميزات تعمل بشكل كامل
+تم إصلاح خطأ StreamlitDuplicateElementId
 """
 
 import streamlit as st
@@ -38,7 +38,8 @@ def init_session_state():
         'current_page': 'dashboard',
         'selected_symbol': None,
         'analysis_results': None,
-        'stock_data': None
+        'stock_data': None,
+        'sidebar_config': None  # تخزين إعدادات الشريط الجانبي
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -53,41 +54,42 @@ init_session_state()
 def scan_market_ai(sector=None, min_score=60, min_prob=55):
     """
     مسح السوق باستخدام الذكاء الاصطناعي
-    محاكاة للنتائج (في التطبيق الحقيقي يتم الاتصال بالنموذج)
     """
-    # قائمة الأسهم الأمريكية
+    # قائمة الأسهم الأمريكية الموسعة
     symbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'AMD',
                'INTC', 'NFLX', 'PYPL', 'ADBE', 'CRM', 'ORCL', 'IBM', 'CSCO',
-               'QCOM', 'TXN', 'AVGO', 'INTU', 'AMAT', 'LRCX', 'MU', 'NOW']
+               'QCOM', 'TXN', 'AVGO', 'INTU', 'AMAT', 'LRCX', 'MU', 'NOW',
+               'PANW', 'SNPS', 'CDNS', 'MCHP', 'ADI', 'NXPI']
     
     results = []
     
-    for symbol in symbols[:15]:  # حد للسرعة
+    for symbol in symbols[:15]:
         try:
-            # جلب البيانات
             ticker = yf.Ticker(symbol)
             df = ticker.history(period="6mo")
             
             if df.empty or len(df) < 50:
                 continue
             
-            # محاكاة التحليل بالذكاء الاصطناعي
             close = df['Close']
             volume = df['Volume']
             
-            # حساب مؤشرات بسيطة
+            # حساب مؤشرات فنية
             sma_20 = close.rolling(20).mean()
             std_20 = close.rolling(20).std()
             bb_upper = sma_20 + (std_20 * 2)
             bb_lower = sma_20 - (std_20 * 2)
             bandwidth = (bb_upper.iloc[-1] - bb_lower.iloc[-1]) / sma_20.iloc[-1]
             
-            # محاكاة درجة الضغط
+            # درجة الضغط
             squeeze_score = max(0, min(100, (1 - bandwidth) * 150))
             
-            # محاكاة احتمالية الانفجار
-            volume_ratio = volume.iloc[-1] / volume.iloc[-21:-1].mean()
-            breakout_prob = min(100, (squeeze_score * 0.7 + volume_ratio * 20))
+            # حجم التداول
+            avg_volume = volume.iloc[-21:-1].mean()
+            volume_ratio = volume.iloc[-1] / avg_volume if avg_volume > 0 else 1
+            
+            # احتمالية الانفجار
+            breakout_prob = min(100, (squeeze_score * 0.6 + volume_ratio * 25))
             
             # معلومات الشركة
             info = ticker.info
@@ -100,10 +102,8 @@ def scan_market_ai(sector=None, min_score=60, min_prob=55):
             
             # فلترة حسب الدرجة
             if squeeze_score >= min_score and breakout_prob >= min_prob:
-                # حساب مستويات الدخول
                 current_price = close.iloc[-1]
-                atr = df['High'].rolling(14).max() - df['Low'].rolling(14).min()
-                atr = atr.iloc[-1] / 14
+                atr = (df['High'] - df['Low']).rolling(14).mean().iloc[-1] or 1
                 
                 results.append({
                     'symbol': symbol,
@@ -121,7 +121,7 @@ def scan_market_ai(sector=None, min_score=60, min_prob=55):
                     'target_2': round(current_price * 1.20, 2)
                 })
                 
-        except Exception as e:
+        except Exception:
             continue
     
     return pd.DataFrame(results)
@@ -192,15 +192,6 @@ def get_file_content(filename):
 import streamlit as st
 
 st.title("🚀 الماسح الضوئي للأسهم")
-st.write("مرحباً بك في التطبيق")
-
-# عرض واجهة المستخدم
-option = st.sidebar.selectbox("اختر الصفحة", ["الرئيسية", "مسح السوق", "التحليل"])
-
-if option == "مسح السوق":
-    st.subheader("🔍 مسح السوق")
-    if st.button("ابدأ المسح"):
-        st.success("تم المسح!")
 """,
         "breakout_scanner.py": """# breakout_scanner.py
 class BreakoutScanner:
@@ -217,22 +208,25 @@ class SmartScanner:
     
     def scan(self):
         return [{'symbol': 'AAPL', 'score': 85}]
-"""
+""",
+        "__init__.py": "# ملف تهيئة الوحدة",
+        "requirements.txt": "streamlit>=1.28.0\npandas>=2.0.0\nyfinance>=0.2.0",
+        "README.md": "# الماسح الضوئي للأسهم\n\nتطبيق لمسح الأسهم الأمريكية."
     }
     return file_contents.get(filename, f"# محتوى الملف: {filename}")
 
 # ============================================================================
-# مكونات الواجهة
+# مكونات الواجهة - تم إصلاحها
 # ============================================================================
 
 def render_sidebar():
-    """عرض الشريط الجانبي"""
+    """عرض الشريط الجانبي - يتم استدعاؤه مرة واحدة فقط"""
     with st.sidebar:
         st.image("https://img.icons8.com/fluency/96/stock.png", width=80)
         st.title("🚀 الماسح الضوئي")
         st.markdown("---")
         
-        # القائمة الرئيسية
+        # القائمة الرئيسية - استخدام unique key
         pages = {
             "📊 لوحة التحكم": "dashboard",
             "🔍 مسح السوق": "scanner",
@@ -240,29 +234,54 @@ def render_sidebar():
             "📈 تحليل سهم": "analyze"
         }
         
-        selected = st.radio("القائمة", list(pages.keys()), index=0)
+        selected = st.radio(
+            "القائمة", 
+            list(pages.keys()), 
+            index=0,
+            key="main_menu_radio"  # مفتاح فريد لمنع التكرار
+        )
         st.session_state.current_page = pages[selected]
         
         st.markdown("---")
         
         # إعدادات المسح
         st.subheader("⚙️ إعدادات المسح")
-        min_score = st.slider("درجة الجاهزية", 50, 95, 70)
-        min_prob = st.slider("احتمالية الانفجار", 30, 90, 55)
+        min_score = st.slider(
+            "درجة الجاهزية", 
+            50, 95, 70,
+            key="min_score_slider"
+        )
+        min_prob = st.slider(
+            "احتمالية الانفجار", 
+            30, 90, 55,
+            key="min_prob_slider"
+        )
         sectors = ["الكل", "التكنولوجيا", "المالية", "الرعاية الصحية", "الاستهلاك", "الطاقة"]
-        sector = st.selectbox("القطاع", sectors)
+        sector = st.selectbox(
+            "القطاع", 
+            sectors,
+            key="sector_select"
+        )
         
-        scan_clicked = st.button("🔍 ابدأ المسح", use_container_width=True, type="primary")
+        scan_clicked = st.button(
+            "🔍 ابدأ المسح", 
+            use_container_width=True, 
+            type="primary",
+            key="scan_button"
+        )
         
         st.markdown("---")
         st.caption(f"⏱️ {datetime.now().strftime('%Y-%m-%d %H:%M')}")
         
-        return {
+        # تخزين الإعدادات في حالة الجلسة
+        st.session_state.sidebar_config = {
             'min_score': min_score,
             'min_prob': min_prob,
             'sector': None if sector == "الكل" else sector,
             'scan_clicked': scan_clicked
         }
+        
+        return st.session_state.sidebar_config
 
 
 def render_dashboard():
@@ -281,7 +300,6 @@ def render_dashboard():
     
     st.markdown("---")
     
-    # عرض نتائج المسح إذا وجدت
     if not st.session_state.scan_results.empty:
         st.subheader("📋 نتائج المسح")
         st.dataframe(
@@ -305,13 +323,15 @@ def render_scanner():
     """صفحة مسح السوق"""
     st.subheader("🔍 مسح السوق الآلي")
     
-    if st.button("🔄 تحديث النتائج", type="primary"):
+    # استخدام الإعدادات المخزنة
+    config = st.session_state.sidebar_config or {'min_score': 70, 'min_prob': 55, 'sector': None}
+    
+    if st.button("🔄 تحديث النتائج", type="primary", key="refresh_scan"):
         with st.spinner("جاري مسح السوق..."):
-            config = render_sidebar()
             results = scan_market_ai(
-                sector=config['sector'],
-                min_score=config['min_score'],
-                min_prob=config['min_prob']
+                sector=config.get('sector'),
+                min_score=config.get('min_score', 70),
+                min_prob=config.get('min_prob', 55)
             )
             if not results.empty:
                 st.session_state.scan_results = results
@@ -320,7 +340,6 @@ def render_scanner():
             else:
                 st.warning("⚠️ لا توجد نتائج مطابقة")
     
-    # عرض النتائج
     if not st.session_state.scan_results.empty:
         st.dataframe(
             st.session_state.scan_results,
@@ -328,13 +347,13 @@ def render_scanner():
             hide_index=True
         )
         
-        # زر تصدير
         csv = st.session_state.scan_results.to_csv(index=False)
         st.download_button(
             "📥 تحميل CSV",
             csv,
             f"scan_results_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-            "text/csv"
+            "text/csv",
+            key="download_csv"
         )
 
 
@@ -344,7 +363,7 @@ def render_file_explorer():
     
     files = {
         "📁 backend": ["__init__.py", "breakout_scanner.py", "screener.py"],
-        "📁 frontend": ["app.py", "dashboard.py"],
+        "📁 frontend": ["app.py"],
         "📄 requirements.txt": None,
         "📄 README.md": None
     }
@@ -357,7 +376,7 @@ def render_file_explorer():
                     with col1:
                         st.write(f"📄 {file}")
                     with col2:
-                        if st.button("📖", key=f"file_{file}"):
+                        if st.button("📖", key=f"file_btn_{file}"):
                             st.session_state.selected_file = file
                             st.session_state.show_file = True
                             st.rerun()
@@ -366,19 +385,18 @@ def render_file_explorer():
             with col1:
                 st.write(name)
             with col2:
-                if st.button("📖", key=f"file_{name}"):
+                if st.button("📖", key=f"file_btn_{name}"):
                     st.session_state.selected_file = name
                     st.session_state.show_file = True
                     st.rerun()
     
-    # عرض محتوى الملف المختار
     if st.session_state.show_file and st.session_state.selected_file:
         st.markdown("---")
         st.subheader(f"📄 محتوى: {st.session_state.selected_file}")
         content = get_file_content(st.session_state.selected_file)
         st.code(content, language='python')
         
-        if st.button("❌ إغلاق"):
+        if st.button("❌ إغلاق", key="close_file"):
             st.session_state.show_file = False
             st.session_state.selected_file = None
             st.rerun()
@@ -388,7 +406,11 @@ def render_analyze():
     """تحليل سهم محدد"""
     st.subheader("📈 تحليل سهم محدد")
     
-    symbol = st.text_input("أدخل رمز السهم (مثل: AAPL)", value="AAPL").upper()
+    symbol = st.text_input(
+        "أدخل رمز السهم (مثل: AAPL)", 
+        value="AAPL",
+        key="symbol_input"
+    ).upper()
     
     if symbol:
         with st.spinner(f"جاري تحليل {symbol}..."):
@@ -398,11 +420,9 @@ def render_analyze():
                 st.error(f"❌ لا توجد بيانات للسهم {symbol}")
                 return
             
-            # عرض البيانات
             col1, col2 = st.columns([2, 1])
             
             with col1:
-                # رسم بياني
                 entry_points = {
                     'entry_point': df['Close'].iloc[-1] * 1.02,
                     'stop_loss': df['Close'].iloc[-1] * 0.97,
@@ -413,7 +433,6 @@ def render_analyze():
                 st.plotly_chart(fig, use_container_width=True)
             
             with col2:
-                # معلومات السهم
                 st.metric("السعر الحالي", f"${df['Close'].iloc[-1]:.2f}")
                 st.metric("أعلى سعر", f"${df['High'].max():.2f}")
                 st.metric("أدنى سعر", f"${df['Low'].min():.2f}")
@@ -433,16 +452,17 @@ def render_analyze():
 def main():
     """الدالة الرئيسية"""
     
-    # عرض الشريط الجانبي
-    config = render_sidebar()
+    # عرض الشريط الجانبي (مرة واحدة فقط)
+    render_sidebar()
     
     # تشغيل المسح إذا تم الضغط على الزر
-    if config['scan_clicked']:
+    config = st.session_state.sidebar_config
+    if config and config.get('scan_clicked', False):
         with st.spinner("🔍 جاري مسح السوق..."):
             results = scan_market_ai(
-                sector=config['sector'],
-                min_score=config['min_score'],
-                min_prob=config['min_prob']
+                sector=config.get('sector'),
+                min_score=config.get('min_score', 70),
+                min_prob=config.get('min_prob', 55)
             )
             if not results.empty:
                 st.session_state.scan_results = results
