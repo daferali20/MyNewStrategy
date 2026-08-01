@@ -1,7 +1,7 @@
 # app.py
 """
 التطبيق الرئيسي - الماسح الضوئي للأسهم
-تم إصلاح مشكلة اختفاء الصفحة نهائياً
+تم إزالة مستكشف الملفات نهائياً
 """
 
 import streamlit as st
@@ -11,10 +11,9 @@ from datetime import datetime
 import pandas as pd
 
 # ============================================================================
-# إعدادات الصفحة - يتم تنفيذها مرة واحدة فقط
+# إعدادات الصفحة
 # ============================================================================
 
-# التحقق من عدم إعادة التحميل المتكرر
 if 'page_loaded' not in st.session_state:
     st.set_page_config(
         page_title="الماسح الضوئي للأسهم | Breakout Scanner",
@@ -30,25 +29,22 @@ if ROOT_DIR not in sys.path:
     sys.path.append(ROOT_DIR)
 
 # ============================================================================
-# تهيئة حالة الجلسة - مرة واحدة فقط
+# تهيئة حالة الجلسة
 # ============================================================================
 
 def init_session_state():
-    """تهيئة جميع متغيرات الجلسة - يتم تنفيذها مرة واحدة فقط"""
+    """تهيئة جميع متغيرات الجلسة"""
     defaults = {
         'scan_results': pd.DataFrame(),
-        'selected_file': None,
-        'show_file': False,
         'current_page': 'dashboard',
         'sidebar_config': {},
         'last_scan_time': None,
         'scan_in_progress': False,
         'initialized': False,
         'page_loaded': True,
-        'rerun_trigger': 0  # لمنع إعادة التحميل المتكررة
+        'css_loaded': False
     }
     
-    # تهيئة فقط إذا لم تكن مهيأة مسبقاً
     if not st.session_state.get('initialized', False):
         for key, value in defaults.items():
             if key not in st.session_state:
@@ -70,7 +66,7 @@ try:
 except ImportError:
     render_sidebar = lambda: {}
 
-# استيراد الصفحات مع معالجة الأخطاء
+# استيراد الصفحات المتبقية فقط
 try:
     from frontend.pages.dashboard import render as render_dashboard
 except ImportError:
@@ -82,11 +78,6 @@ except ImportError:
     render_scanner = lambda: st.warning("⚠️ صفحة المسح غير متوفرة")
 
 try:
-    from frontend.pages.file_explorer import render as render_file_explorer
-except ImportError:
-    render_file_explorer = lambda: st.warning("⚠️ صفحة مستكشف الملفات غير متوفرة")
-
-try:
     from frontend.pages.analyze import render as render_analyze
 except ImportError:
     render_analyze = lambda: st.warning("⚠️ صفحة التحليل غير متوفرة")
@@ -96,14 +87,10 @@ except ImportError:
 # ============================================================================
 
 def main():
-    """الدالة الرئيسية للتطبيق - منع إعادة التحميل المتكررة"""
+    """الدالة الرئيسية للتطبيق"""
     
     # تهيئة حالة الجلسة
     init_session_state()
-    
-    # منع إعادة التحميل المتكررة
-    if st.session_state.get('rerun_trigger', 0) > 10:
-        st.session_state.rerun_trigger = 0
     
     # تحميل التصميم (مرة واحدة فقط)
     if not st.session_state.get('css_loaded', False):
@@ -116,7 +103,7 @@ def main():
     # عرض الشريط الجانبي
     render_sidebar()
     
-    # معالجة المسح - بدون إعادة تحميل
+    # معالجة المسح
     handle_scan()
     
     # عرض الصفحة المختارة
@@ -132,7 +119,7 @@ def render_header():
     """, unsafe_allow_html=True)
 
 def handle_scan():
-    """معالجة طلب المسح - بدون إعادة تحميل"""
+    """معالجة طلب المسح"""
     config = st.session_state.get('sidebar_config', {})
     
     if config and config.get('scan_clicked', False):
@@ -160,7 +147,6 @@ def handle_scan():
                     st.warning("⚠️ لا توجد نتائج مطابقة للمعايير الحالية")
             
             st.session_state.scan_in_progress = False
-            # إعادة تعيين زر المسح
             if 'sidebar_config' in st.session_state:
                 st.session_state.sidebar_config['scan_clicked'] = False
 
@@ -169,17 +155,15 @@ def mock_scan(sector=None, min_score=60, min_prob=55, max_symbols=20):
     return get_sample_data()
 
 def render_current_page():
-    """عرض الصفحة المختارة - بدون إعادة تحميل"""
+    """عرض الصفحة المختارة"""
     page = st.session_state.get('current_page', 'dashboard')
     
     pages = {
         'dashboard': render_dashboard,
         'scanner': render_scanner,
-        'files': render_file_explorer,
         'analyze': render_analyze
     }
     
-    # عرض الصفحة المختارة
     pages.get(page, render_dashboard)()
 
 if __name__ == "__main__":
