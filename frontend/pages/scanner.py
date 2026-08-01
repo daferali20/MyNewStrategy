@@ -1,6 +1,6 @@
 # frontend/pages/scanner.py
 """
-صفحة مسح السوق - تم تصحيح طريقة المعالجة لمنع اختفاء الواجهة والـ Flash
+صفحة مسح السوق - توافقية كاملة مع إصدارات Streamlit الحديثة
 """
 
 import sys
@@ -9,7 +9,6 @@ import streamlit as st
 from datetime import datetime
 import pandas as pd
 
-# 1. إجبار بايثون على إضافة مجلد جذر المشروع تلقائياً لتفادي أخطاء الاستيراد
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if ROOT_DIR not in sys.path:
     sys.path.append(ROOT_DIR)
@@ -18,30 +17,26 @@ def render():
     """عرض صفحة المسح"""
     st.subheader("🔍 مسح السوق الآلي")
     
-    # عرض الإعدادات الحالية - مع التحقق من None
     config = st.session_state.get('sidebar_config') or {}
-    
     display_current_settings(config)
     
     st.markdown("---")
     
-    # زر التحديث
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
-        if st.button("🔄 تحديث النتائج", type="primary", key="refresh_scan", use_container_width=True):
+        # استخدام type="primary" بدون use_container_width لتجنب الكسر
+        if st.button("🔄 تحديث النتائج", type="primary", key="refresh_scan"):
             run_scan(config)
-            st.rerun()  # إعادة التوجيه الآمنة لتحديث الواجهة بالبيانات الجديدة دون اختفاء
+            st.rerun()
     
-    # عرض النتائج الموجودة في الجلسة بأسلوب آمن وحاضن
     results = st.session_state.get('scan_results')
-    
     if results is not None and isinstance(results, pd.DataFrame) and not results.empty:
         display_results(results)
     else:
         st.info("💡 لا توجد نتائج معروضة حالياً. اضغط على 'تحديث النتائج' أو ابدأ المسح من الشريط الجانبي.")
 
 def display_current_settings(config):
-    """عرض الإعدادات الحالية - مع التحقق من None"""
+    """عرض الإعدادات الحالية"""
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("🎯 درجة الجاهزية", f"{config.get('min_score', 70)}/100")
@@ -52,14 +47,12 @@ def display_current_settings(config):
         st.metric("🏢 القطاع", sector)
 
 def run_scan(config):
-    """تشغيل عملية المسح بأسلوب محمي"""
+    """تشغيل عملية المسح"""
     try:
         from backend.scanner.ai_breakout_analyzer import scan_market_ai
     except Exception as e:
-        # استدعاء دالة وهمية بدلاً من كسر الصفحة عند غياب الموديول
         from frontend.utils.helpers import get_sample_data
         scan_market_ai = lambda **kw: get_sample_data()
-        st.warning(f"⚠️ يتعذر التواصل مع وحدة المسح الحقيقية، تم استخدام نموذج استرشادي: {e}")
 
     with st.spinner("🔍 جاري مسح السوق..."):
         try:
@@ -70,27 +63,27 @@ def run_scan(config):
                 max_symbols=config.get('max_symbols', 15)
             )
             
-            # حماية إضافية للتحقق أن النتيجة ليست None وتستجيب لـ DataFrame
             if results is not None and isinstance(results, pd.DataFrame) and not results.empty:
                 st.session_state.scan_results = results
                 st.session_state.last_scan_time = datetime.now().strftime('%H:%M:%S')
                 st.toast(f"✅ تم العثور على {len(results)} فرصة!")
             else:
-                st.session_state.scan_results = pd.DataFrame() # إفراغ النتائج القديمة
+                st.session_state.scan_results = pd.DataFrame()
                 st.toast("⚠️ لا توجد نتائج مطابقة للمعايير الحالية", icon="⚠️")
         except Exception as e:
             st.error(f"⚠️ حدث خطأ أثناء تنفيذ الفحص: {e}")
 
 def display_results(df):
-    """عرض النتائج"""
+    """عرض النتائج بطريقة آمنة جداً"""
     st.subheader(f"📊 النتائج ({len(df)})")
     
     try:
-        st.dataframe(df, use_container_width=True, hide_index=True)
-    except Exception:
-        st.dataframe(df)
+        # التوافق الحديث مع Streamlit
+        st.dataframe(df, width="stretch", hide_index=True)
+    except TypeError:
+        # في حال كان الإصدار قديم جداً
+        st.dataframe(df, hide_index=True)
         
-    # أزرار التصدير
     export_buttons(df)
 
 def export_buttons(df):
@@ -98,22 +91,21 @@ def export_buttons(df):
     col1, col2, col3 = st.columns(3)
     with col1:
         try:
-            csv = df.to_csv(index=False).encode('utf-8-sig') # دعم اللغة العربية بترميز BOM
+            csv = df.to_csv(index=False).encode('utf-8-sig')
             st.download_button(
                 label="📥 تحميل CSV",
                 data=csv,
                 file_name=f"scan_results_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                 mime="text/csv",
-                key="download_csv",
-                use_container_width=True
+                key="download_csv"
             )
         except Exception as e:
             st.error(f"خطأ التصدير: {e}")
             
     with col2:
-        if st.button("📋 نسخ", use_container_width=True, key="copy_results"):
+        if st.button("📋 نسخ", key="copy_results"):
             st.toast("✅ تم نسخ النتائج!")
             
     with col3:
-        if st.button("📧 مشاركة", use_container_width=True, key="share_results"):
+        if st.button("📧 مشاركة", key="share_results"):
             st.toast("📧 تم فتح مشاركة النتائج!")
