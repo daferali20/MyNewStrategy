@@ -10,6 +10,31 @@ import os
 from datetime import datetime
 import pandas as pd
 
+
+def navigate_to(page_name: str, symbol: str = None):
+    """
+    دالة موحدة ومصممة بأعلى درجات الأمان للتنقل بين الصفحات.
+    
+    :param page_name: اسم الصفحة الهدف ('dashboard', 'scanner', 'analyze')
+    :param symbol: رمز السهم الاختياري للتمرير لصفحة التحليل
+    """
+    # 1. تحديث الصفحة الحالية في الجلسة
+    st.session_state['current_page'] = page_name
+
+    # 2. إذا تم تمرير رمز سهم، يتم حفظه لصفحة التحليل
+    if symbol:
+        st.session_state['selected_symbol'] = symbol
+
+    # 3. 🚨 السطر الحاسم: تحديث مفتاح زر الراديو/القائمة في الشريط الجانبي (إن وجد)
+    # لمنع الشريط الجانبي من إرجاع المستخدم للصفحة القديمة في الـ Re-run القادم
+    if 'nav_radio' in st.session_state:
+        st.session_state['nav_radio'] = page_name
+    
+    if 'sidebar_page' in st.session_state:
+        st.session_state['sidebar_page'] = page_name
+
+    # 4. إعادة التشغيل الفوري لإظهار الصفحة الجديدة بلمشة عين
+    st.rerun()
 # ============================================================================
 # 1. إعدادات المسارات والصفحة (Page Setup & Path Isolation)
 # ============================================================================
